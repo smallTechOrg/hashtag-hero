@@ -53,7 +53,9 @@ def test_recorded_bellandur_has_zero_dynamic_types_in_glb_extras_and_manifest(tm
     assert extras and len(gltf.nodes) > 3
     manifest = json.loads(files.manifest.read_bytes())
 
-    for label, doc in (("glb extras", extras), ("manifest", manifest)):
+    # manifest.scenery is the one place dynamic types belong: non-colliding 3D props at the entities the model saw
+    assert {p["type"] for p in manifest["scenery"]} <= set(DYNAMIC)
+    for label, doc in (("glb extras", extras), ("manifest", {k: v for k, v in manifest.items() if k != "scenery"})):
         found = {s for s in _strings(doc) if s in DYNAMIC}
         assert not found, f"{label} carries dynamic types: {found}"
     assert not {e["type"] for e in manifest["entities"]} & set(DYNAMIC)

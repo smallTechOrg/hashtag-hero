@@ -2939,8 +2939,8 @@
      {
       "s_from": 0.0,
       "s_to": 2.5,
-      "lat_from": 19.708,
-      "lat_to": 19.708,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 15.25,
       "kind": "building",
       "colour_hex": "#c8d048",
@@ -2954,8 +2954,8 @@
      {
       "s_from": 2.5,
       "s_to": 5.0,
-      "lat_from": 19.721,
-      "lat_to": 19.721,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 16.0,
       "kind": "building",
       "colour_hex": "#c8cf4a",
@@ -2969,8 +2969,8 @@
      {
       "s_from": 5.0,
       "s_to": 7.5,
-      "lat_from": 19.083,
-      "lat_to": 19.083,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 16.0,
       "kind": "wall",
       "colour_hex": "#c8cf4a",
@@ -2983,24 +2983,9 @@
      },
      {
       "s_from": 7.5,
-      "s_to": 10.0,
-      "lat_from": 19.721,
-      "lat_to": 19.721,
-      "height_m": 16.0,
-      "kind": "building",
-      "colour_hex": "#c8cf4a",
-      "storeys": 5,
-      "source": "osm",
-      "building_id": "bld-osm-309674931",
-      "entity_id": null,
-      "interpolated": false,
-      "confidence": 0.5
-     },
-     {
-      "s_from": 10.0,
       "s_to": 12.5,
-      "lat_from": 18.446,
-      "lat_to": 18.446,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 16.0,
       "kind": "building",
       "colour_hex": "#c8cf4a",
@@ -3014,8 +2999,8 @@
      {
       "s_from": 12.5,
       "s_to": 15.0,
-      "lat_from": 18.446,
-      "lat_to": 18.446,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 16.0,
       "kind": "building",
       "colour_hex": "#c8cf4a",
@@ -3028,8 +3013,38 @@
      },
      {
       "s_from": 15.0,
+      "s_to": 25.0,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
+      "height_m": 9.0,
+      "kind": "building",
+      "colour_hex": "#c9d04c",
+      "storeys": 4,
+      "source": "osm",
+      "building_id": "bld-osm-309674933",
+      "entity_id": null,
+      "interpolated": false,
+      "confidence": 0.5
+     },
+     {
+      "s_from": 25.0,
+      "s_to": 27.5,
+      "lat_from": 11.55,
+      "lat_to": 11.514,
+      "height_m": 9.0,
+      "kind": "building",
+      "colour_hex": "#c9d04c",
+      "storeys": 4,
+      "source": "osm",
+      "building_id": "bld-osm-309674933",
+      "entity_id": null,
+      "interpolated": false,
+      "confidence": 0.5
+     },
+     {
+      "s_from": 27.5,
       "s_to": 32.5,
-      "lat_from": 14.083,
+      "lat_from": 11.514,
       "lat_to": 10.486,
       "height_m": 9.0,
       "kind": "building",
@@ -3119,8 +3134,8 @@
      {
       "s_from": 55.0,
       "s_to": 62.5,
-      "lat_from": 13.988,
-      "lat_to": 13.19,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 9.0,
       "kind": "building",
       "colour_hex": "#e8e0cc",
@@ -3134,8 +3149,8 @@
      {
       "s_from": 62.5,
       "s_to": 65.0,
-      "lat_from": 13.456,
-      "lat_to": 13.456,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 9.0,
       "kind": "gate",
       "colour_hex": "#e8e0cc",
@@ -3164,8 +3179,8 @@
      {
       "s_from": 67.5,
       "s_to": 70.0,
-      "lat_from": 11.861,
-      "lat_to": 11.861,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 9.0,
       "kind": "wall",
       "colour_hex": "#e8e0cc",
@@ -3179,8 +3194,8 @@
      {
       "s_from": 70.0,
       "s_to": 72.5,
-      "lat_from": 11.596,
-      "lat_to": 11.596,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
       "height_m": 9.0,
       "kind": "gate",
       "colour_hex": "#e8e0cc",
@@ -3193,8 +3208,38 @@
      },
      {
       "s_from": 72.5,
+      "s_to": 77.5,
+      "lat_from": 11.55,
+      "lat_to": 11.55,
+      "height_m": 9.0,
+      "kind": "building",
+      "colour_hex": "#e8e0cc",
+      "storeys": 5,
+      "source": "osm",
+      "building_id": "bld-osm-309674936",
+      "entity_id": null,
+      "interpolated": false,
+      "confidence": 0.65
+     },
+     {
+      "s_from": 77.5,
+      "s_to": 80.0,
+      "lat_from": 11.55,
+      "lat_to": 11.33,
+      "height_m": 9.0,
+      "kind": "building",
+      "colour_hex": "#e8e0cc",
+      "storeys": 5,
+      "source": "osm",
+      "building_id": "bld-osm-309674936",
+      "entity_id": null,
+      "interpolated": false,
+      "confidence": 0.65
+     },
+     {
+      "s_from": 80.0,
       "s_to": 85.0,
-      "lat_from": 12.127,
+      "lat_from": 11.33,
       "lat_to": 10.798,
       "height_m": 9.0,
       "kind": "building",
@@ -3275,8 +3320,8 @@
      {
       "s_from": 0.0,
       "s_to": 2.5,
-      "lat_from": -10.568,
-      "lat_to": -10.568,
+      "lat_from": -9.048,
+      "lat_to": -9.048,
       "height_m": 9.6,
       "kind": "building",
       "colour_hex": "#dcd0b8",
@@ -3290,8 +3335,8 @@
      {
       "s_from": 2.5,
       "s_to": 5.0,
-      "lat_from": -10.568,
-      "lat_to": -10.568,
+      "lat_from": -9.048,
+      "lat_to": -9.048,
       "height_m": 9.6,
       "kind": "building",
       "colour_hex": "#dcd0b8",
@@ -3364,24 +3409,9 @@
      },
      {
       "s_from": 15.0,
-      "s_to": 17.5,
-      "lat_from": -9.665,
-      "lat_to": -9.665,
-      "height_m": 9.6,
-      "kind": "building",
-      "colour_hex": "#dcd0b8",
-      "storeys": 3,
-      "source": "osm",
-      "building_id": "bld-osm-310345954",
-      "entity_id": null,
-      "interpolated": false,
-      "confidence": 0.738
-     },
-     {
-      "s_from": 17.5,
       "s_to": 20.0,
-      "lat_from": -9.194,
-      "lat_to": -9.194,
+      "lat_from": -9.048,
+      "lat_to": -9.048,
       "height_m": 9.6,
       "kind": "building",
       "colour_hex": "#dcd0b8",
@@ -3455,7 +3485,7 @@
      {
       "s_from": 30.0,
       "s_to": 32.5,
-      "lat_from": -9.53,
+      "lat_from": -9.048,
       "lat_to": -9.53,
       "height_m": 9.6,
       "kind": "building",
@@ -3470,8 +3500,8 @@
      {
       "s_from": 32.5,
       "s_to": 35.0,
-      "lat_from": -10.187,
-      "lat_to": -10.187,
+      "lat_from": -9.65,
+      "lat_to": -9.65,
       "height_m": 9.6,
       "kind": "building",
       "colour_hex": "#dcd0b8",
@@ -3514,24 +3544,9 @@
      },
      {
       "s_from": 40.0,
-      "s_to": 42.5,
-      "lat_from": -9.718,
-      "lat_to": -9.718,
-      "height_m": 9.6,
-      "kind": "building",
-      "colour_hex": "#dcd0b8",
-      "storeys": 3,
-      "source": "osm",
-      "building_id": "bld-osm-310345954",
-      "entity_id": null,
-      "interpolated": false,
-      "confidence": 0.738
-     },
-     {
-      "s_from": 42.5,
       "s_to": 45.0,
-      "lat_from": -10.382,
-      "lat_to": -10.382,
+      "lat_from": -9.65,
+      "lat_to": -9.65,
       "height_m": 9.6,
       "kind": "building",
       "colour_hex": "#dcd0b8",
@@ -3545,8 +3560,8 @@
      {
       "s_from": 45.0,
       "s_to": 47.5,
-      "lat_from": -10.069,
-      "lat_to": -10.069,
+      "lat_from": -9.65,
+      "lat_to": -9.65,
       "height_m": 9.25,
       "kind": "building",
       "colour_hex": "#e8e0d0",
@@ -4236,6 +4251,288 @@
    "confidence": 0.478,
    "fidelity_level": 2,
    "description": "Mannequins displayed outside a clothing shop at the edge of the footpath."
+  }
+ ],
+ "scenery": [
+  {
+   "id": "ent-6b372ddf13",
+   "type": "parked_vehicle",
+   "variant": "auto-rickshaw",
+   "s": 0.0,
+   "lat": -4.233,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.635
+  },
+  {
+   "id": "ent-844968ef4b",
+   "type": "parked_vehicle",
+   "variant": "car",
+   "s": 0.0,
+   "lat": -5.834,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 0.84,
+    "h": 1.238,
+    "d": 2.193
+   },
+   "confidence": 0.454
+  },
+  {
+   "id": "ent-8b5360ca43",
+   "type": "parked_vehicle",
+   "variant": "auto-rickshaw",
+   "s": 0.68,
+   "lat": -0.266,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.59
+  },
+  {
+   "id": "ent-acb6f1eddb",
+   "type": "parked_vehicle",
+   "variant": "auto-rickshaw",
+   "s": 14.915,
+   "lat": 0.445,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.522
+  },
+  {
+   "id": "ent-1bce19a51b",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 20.182,
+   "lat": 9.477,
+   "yaw_deg": 90.0,
+   "size_m": {
+    "w": 1.675,
+    "h": 1.2,
+    "d": 0.925
+   },
+   "confidence": 0.626
+  },
+  {
+   "id": "ent-291872c818",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 22.646,
+   "lat": 11.26,
+   "yaw_deg": 90.0,
+   "size_m": {
+    "w": 1.9,
+    "h": 1.2,
+    "d": 0.7
+   },
+   "confidence": 0.764
+  },
+  {
+   "id": "ent-a3ff6954a4",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 24.763,
+   "lat": 12.824,
+   "yaw_deg": 90.0,
+   "size_m": {
+    "w": 1.9,
+    "h": 1.2,
+    "d": 0.7
+   },
+   "confidence": 0.458
+  },
+  {
+   "id": "ent-5f66b14406",
+   "type": "parked_vehicle",
+   "variant": "auto-rickshaw",
+   "s": 30.121,
+   "lat": 1.211,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.662
+  },
+  {
+   "id": "ent-9a1a494c61",
+   "type": "parked_vehicle",
+   "variant": "van",
+   "s": 41.654,
+   "lat": -0.505,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.494
+  },
+  {
+   "id": "ent-d56d3c14e1",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 50.74,
+   "lat": -0.517,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 0.952,
+    "h": 1.269,
+    "d": 2.426
+   },
+   "confidence": 0.76
+  },
+  {
+   "id": "ent-c7a17204af",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 52.066,
+   "lat": -6.424,
+   "yaw_deg": 65.525,
+   "size_m": {
+    "w": 1.525,
+    "h": 1.2,
+    "d": 1.075
+   },
+   "confidence": 0.616
+  },
+  {
+   "id": "ent-90b2030524",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 55.65,
+   "lat": -2.876,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 0.7,
+    "h": 1.2,
+    "d": 1.9
+   },
+   "confidence": 0.565
+  },
+  {
+   "id": "ent-c098ccfa99",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 57.098,
+   "lat": 8.003,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 0.7,
+    "h": 1.2,
+    "d": 1.9
+   },
+   "confidence": 0.435
+  },
+  {
+   "id": "ent-51d381ecc5",
+   "type": "parked_vehicle",
+   "variant": "car",
+   "s": 62.687,
+   "lat": 0.624,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.471
+  },
+  {
+   "id": "ent-faabedd195",
+   "type": "parked_vehicle",
+   "variant": "truck",
+   "s": 65.447,
+   "lat": -1.891,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.839
+  },
+  {
+   "id": "ent-ffd6a5d22d",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 74.0,
+   "lat": -1.994,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 0.7,
+    "h": 1.2,
+    "d": 1.9
+   },
+   "confidence": 0.522
+  },
+  {
+   "id": "ent-8461689dc1",
+   "type": "parked_vehicle",
+   "variant": "two-wheeler",
+   "s": 78.763,
+   "lat": -6.728,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 0.7,
+    "h": 1.2,
+    "d": 1.9
+   },
+   "confidence": 0.496
+  },
+  {
+   "id": "ent-eb6cfb8b90",
+   "type": "vendor_stall",
+   "variant": "",
+   "s": 94.751,
+   "lat": 8.772,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.5,
+    "h": 2.0,
+    "d": 1.5
+   },
+   "confidence": 0.751
+  },
+  {
+   "id": "ent-ebb2b58e26",
+   "type": "parked_vehicle",
+   "variant": "bicycle",
+   "s": 97.443,
+   "lat": 8.542,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.461
+  },
+  {
+   "id": "ent-dba02b76f9",
+   "type": "parked_vehicle",
+   "variant": "car",
+   "s": 97.762,
+   "lat": 0.477,
+   "yaw_deg": 0.0,
+   "size_m": {
+    "w": 1.8,
+    "h": 1.5,
+    "d": 4.2
+   },
+   "confidence": 0.731
   }
  ],
  "objects": [

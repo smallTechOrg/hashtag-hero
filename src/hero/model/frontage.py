@@ -37,6 +37,7 @@ from hero.model.types import CanonicalModel, Entity, EntityState, EntityType
 CELL_M = 2.5
 RANGE_M = 35.0
 MAX_LAT_M = 30.0
+MAX_SETBACK_M = 4.0          # facade plane at most this far beyond the walkway / road edge (see plan_side.clamp)
 NEIGHBOUR_M = 30.0
 SAMPLES = 8
 MIN_ENTITY_SPAN_M = 2.5
@@ -380,9 +381,14 @@ def plan_side(model: CanonicalModel, side: str, ev: SideEvidence, dec: Sequence[
     ev = smooth_evidence(ev)
 
     def clamp(lat: float, s: float) -> float:
+        # The street-facing face (compound wall, gate, shopfront) stands right behind the footpath; an OSM building
+        # footprint is often set back 10-20 m behind its compound. The facade plane is kept within MAX_SETBACK_M of
+        # the walkway so the photo-real wall bake lands at the depth the panorama shows.
         if modelled:
-            return min(MAX_LAT_M, max(bounds.modelled_floor(s), lat))
-        return max(-MAX_LAT_M, min(bounds.opposite_ceiling(s), lat))
+            floor = bounds.modelled_floor(s)
+            return min(MAX_LAT_M, floor + MAX_SETBACK_M, max(floor, lat))
+        ceiling = bounds.opposite_ceiling(s)
+        return max(-MAX_LAT_M, ceiling - MAX_SETBACK_M, min(ceiling, lat))
 
     segs: list[FrontageSegment] = []
     for i, ((a, b), d) in enumerate(zip(ev.bounds, dec)):

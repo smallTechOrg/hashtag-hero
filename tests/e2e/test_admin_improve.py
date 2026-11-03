@@ -165,6 +165,8 @@ def test_busy_run_disables_spend_buttons_and_links_to_it(live_server: str, page:
 def test_fill_gaps_preview_shows_counts_cost_stretches_then_generates(live_server: str, page: Page):
     api = _segment(page, live_server)
     card = page.get_by_test_id("improve-action-fill_gaps")
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()   # full detail by default; this test is the plain preview
+    card.get_by_test_id("max-quality-fill").uncheck()
     # No preview yet: the spend buttons say why they are off.
     expect(card.get_by_test_id("fill-generate")).to_be_disabled()
     expect(card.get_by_test_id("fill-generate")).to_have_attribute("title", "Press Preview plan first.")
@@ -195,6 +197,8 @@ def test_fill_gaps_preview_shows_counts_cost_stretches_then_generates(live_serve
 def test_fill_gaps_fetch_only_sends_fuse_false_without_a_model(live_server: str, page: Page):
     api = _segment(page, live_server)
     card = page.get_by_test_id("improve-action-fill_gaps")
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()   # full detail by default; this test is the plain preview
+    card.get_by_test_id("max-quality-fill").uncheck()
     card.get_by_test_id("fill-preview").click()
     expect(card.get_by_test_id("fill-fetch")).to_be_enabled()
     card.get_by_test_id("fill-fetch").click()
@@ -207,6 +211,8 @@ def test_fill_this_stretch_presets_the_range_and_previews_only_it(live_server: s
     api = _segment(page, live_server)
     page.get_by_test_id("weakest-item").nth(2).get_by_test_id("fill-stretch").click()  # 40-60 m
     card = page.get_by_test_id("improve-action-fill_gaps")
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()   # full detail by default; this test is the plain preview
+    card.get_by_test_id("max-quality-fill").uncheck()
     expect(card.get_by_test_id("fill-table")).to_be_visible()
     body = api.posts(f"/segments/{SLUG}/fill-gaps/preview")[-1]
     assert body["s_range"] == {"s_from": 40.0, "s_to": 60.0}
@@ -220,6 +226,8 @@ def test_fill_this_stretch_presets_the_range_and_previews_only_it(live_server: s
 def test_fill_gaps_warning_chips_never_block_the_run(live_server: str, page: Page):
     _segment(page, live_server, MockApi(exceed=True, trimmed=True))
     card = page.get_by_test_id("improve-action-fill_gaps")
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()   # full detail by default; this test is the plain preview
+    card.get_by_test_id("max-quality-fill").uncheck()
     card.get_by_test_id("fill-preview").click()
     expect(card.get_by_test_id("fill-exceeds")).to_contain_text("exceeds the remaining global budget")
     expect(card.get_by_test_id("fill-trimmed")).to_be_visible()
@@ -230,6 +238,8 @@ def test_fill_gaps_start_error_is_shown_inline(live_server: str, page: Page):
     api = MockApi(post_status={"/fill-gaps": (409, {"ok": False, "error": {"code": "run_in_progress", "message": "busy", "detail": None}})})
     _segment(page, live_server, api)
     card = page.get_by_test_id("improve-action-fill_gaps")
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()   # full detail by default; this test is the plain preview
+    card.get_by_test_id("max-quality-fill").uncheck()
     card.get_by_test_id("fill-preview").click()
     card.get_by_test_id("fill-generate").click()
     expect(card.locator(".form-msg")).to_contain_text("Another run is in progress")
@@ -412,7 +422,10 @@ def test_desktop_layout_two_columns_and_full_flow(live_server: str, desktop: Pag
     boxes = [c.bounding_box() for c in cards.all()]
     assert len(boxes) == 4
     assert boxes[0]["y"] == boxes[1]["y"] and boxes[0]["x"] < boxes[1]["x"]  # two columns
-    desktop.get_by_test_id("improve-action-fill_gaps").get_by_test_id("fill-preview").click()
+    fill = desktop.get_by_test_id("improve-action-fill_gaps")
+    expect(fill.get_by_test_id("max-quality-fill")).to_be_checked()
+    fill.get_by_test_id("max-quality-fill").uncheck()
+    fill.get_by_test_id("fill-preview").click()
     expect(desktop.get_by_test_id("fill-totals")).to_contain_text("Claude (estimate)")
     desktop.get_by_test_id("upload-file").set_input_files([png("d.png")])
     click_map(desktop, 0, -30)

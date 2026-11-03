@@ -167,6 +167,21 @@ class SpawnHints(_S):
         return self
 
 
+class SceneryPlan(_S):
+    """A dynamic-context entity the model saw (parked vehicle, stall, cart ...) drawn by the game as a non-colliding
+    3D prop at its own position, so the sides of the street have real depth. Never a collider: the stock obstacles
+    are placed by the spawner."""
+
+    id: str
+    type: str
+    variant: str = ""
+    s: float = Field(ge=0)
+    lat: float                 # game lateral (footpath side positive)
+    yaw_deg: float = 0.0
+    size_m: dict[str, float]
+    confidence: float = Field(ge=0, le=1)
+
+
 class PlanDynamicContext(_S):
     excluded_count: int = Field(ge=0)
     entity_ids: list[str] = Field(default_factory=list)
@@ -203,6 +218,7 @@ class StreetPlan(_S):
     ground_tex: GroundTexPlan
     frontage: FrontagePlan
     furniture: list[FurniturePlan] = Field(default_factory=list)  # sorted by (s, id)
+    scenery: list[SceneryPlan] = Field(default_factory=list)      # sorted by (s, id)
     objects: list[SceneObjectV2] = Field(default_factory=list)  # FIXED hazards + synthetic gap-/blocked- objects
     tokens: list[Token] = Field(default_factory=list)
     dynamic_context: PlanDynamicContext

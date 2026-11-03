@@ -17,6 +17,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "pygltflib==1.16.5",
     "numpy>=2.5.4",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.scripts]

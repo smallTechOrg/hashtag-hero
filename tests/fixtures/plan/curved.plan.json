@@ -3896,6 +3896,7 @@
    "description": "White bollard at the kerb."
   }
  ],
+ "scenery": [],
  "objects": [
   {
    "id": "ent-49a38189ef",

@@ -22,11 +22,10 @@ export const GROUND_NODES = ['Road', 'Footpath', 'Footpath_Opposite', 'Ground_L'
 // Frontage walls carry the glb facade UVs (u = s / L, v = v0 + (1 - h / 12) / 2; L on top, R below): with
 // `manifest.frontage` they get the FROZEN wall atlas baked from the panoramas, so shopfronts never snap.
 export const FRONTAGE_NODES = ['Frontage_L', 'Frontage_R'];
-// Decorative furniture the photo already shows (painted crossings, railings): hidden in photo mode. Poles, trees
-// and boxes stay: they carry the colliders, and a hit must be visible.
+// Furniture stays in photo mode (poles, trees, boxes, railings AND decals - a drain decal marks a collider).
 // Frontage_Caps (roof slabs and the step faces between wall spans at different depths) have no facade UVs and would
 // show as flat grey slabs over the photo: hidden too - a gap between two spans shows the panorama behind instead.
-export const PHOTO_HIDDEN_NODES = ['Furniture_Decals', 'Furniture_Railings', 'Frontage_Caps'];
+export const PHOTO_HIDDEN_NODES = ['Frontage_Caps'];
 export const PANO_SCHEMA = 'hero-panoramas/1';
 const PREFETCH_AHEAD = 2;
 const CACHE_MAX = 6;
@@ -185,6 +184,15 @@ export function createPanoBackdrop(manifest, track, street, { camBackM = 0, expo
   const hidden = [];
   const groundMat = manifest.ground ? new THREE.MeshBasicMaterial({ name: 'mat_pano_ground', color: 0xffffff }) : null;
   const wallMat = manifest.frontage ? new THREE.MeshBasicMaterial({ name: 'mat_pano_frontage', color: 0xffffff }) : null;
+  if (wallMat) {
+    // The closing faces between two wall spans at different depths carry one atlas column stretched over the face
+    // (u is constant across them): with the photo atlas they read as grey slabs. Constant u => drop the fragment;
+    // the panorama behind shows through the step instead.
+    wallMat.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', 'if (fwidth(vMapUv.x) < 1e-7) discard;\n#include <map_fragment>');
+    };
+    wallMat.customProgramCacheKey = () => 'pano-frontage-steps';
+  }
   for (const g of street.copies) {
     g.traverse((o) => {
       if (!o.isMesh) return;

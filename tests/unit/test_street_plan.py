@@ -156,3 +156,22 @@ def test_committed_plans_are_current_valid_json():
         p = StreetPlan.model_validate(raw)
         assert p.length_m == pytest.approx(100.0, abs=0.01)
         assert all(math.isfinite(st.kerb.lat) for st in p.stations)
+
+
+def test_dynamic_context_entities_become_non_colliding_scenery_props():
+    from hero.model.street_plan import plan_scenery
+    from tests.fixtures.street_fixtures import make_entity
+
+    from hero.model.types import Extent
+
+    car = make_entity(entity_id="ent-0000000ca1", type=EntityType.parked_vehicle, s=20.0, t=-4.5, confidence=0.8).model_copy(
+        update={"subtype": "car", "extent": Extent(length_s=0.0, width_t=0.0), "height_m": None})   # catalogue size
+    ents = [(car, 2),
+            (make_entity(entity_id="ent-0000000ca2", type=EntityType.parked_vehicle, s=30.0, t=5.5, confidence=0.3), 0),   # too unsure
+            (make_entity(entity_id="ent-0000000ca3", type=EntityType.vendor_stall, s=40.0, t=6.0, confidence=0.6), 0),
+            (make_entity(entity_id="ent-0000000ca4", type=EntityType.pole, s=50.0, t=6.0, confidence=0.9), 0)]         # furniture, not scenery
+    out = plan_scenery(ents, sign=1, length=100.0)
+    assert [(p.id, p.type, p.s, p.lat) for p in out] == [("ent-0000000ca1", "parked_vehicle", 20.0, -4.5), ("ent-0000000ca3", "vendor_stall", 40.0, 6.0)]
+    # nothing stands on the runner's tracks (lanes 2.7 .. 5.9 here, plus 1.5 m clearance): the stall at 6.0 goes
+    assert [p.id for p in plan_scenery(ents, sign=1, length=100.0, track_band=(1.2, 7.4))] == ["ent-0000000ca1"]
+    assert out[0].variant == "car" and out[0].size_m["d"] > 3 and out[1].confidence == 0.6

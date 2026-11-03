@@ -207,8 +207,11 @@ def test_add_imagery_estimate_tracks_headings_and_fetch_only_posts_the_plan(live
     api = _segment(page, live_server)
     form = page.locator("[data-testid=add-imagery]")
     est = form.get_by_test_id("estimate")
+    expect(form.get_by_test_id("max-quality-imagery")).to_be_checked()    # full detail by default ...
+    form.get_by_test_id("max-quality-imagery").uncheck()                  # ... this test is about the plain plan
+    form.get_by_test_id("imagery-advanced").evaluate("d => { d.open = true; }")
     expect(est).to_contain_text("new images")
-    # The default plan is fully cached by the stored observations (≈ 3 new: the extra stations); 7 m is not.
+    # The plain plan is fully cached by the stored observations (≈ 3 new: the extra stations); 7 m is not.
     assert int(re.search(r"≈ (\d+) new", est.inner_text()).group(1)) <= 4
     form.locator("[name=spacing]").fill("7")
     expect(form.locator(".spacing-out")).to_have_text("7 m")

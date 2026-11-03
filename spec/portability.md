@@ -11,7 +11,7 @@ This file is the single home of the frame/units rules, the `street.glb` node con
 | canonical model JSON (`street-model/1`) | versioned truth per segment: reference line, cross-section, entities with evidence, fidelity (`spec/data.md`) | admin model API | `hero.model` |
 | scene v3-lite JSON (schema 3) | what the UI around the game needs: segment info, walkability, About, overview tile, `assets` URLs + hashes (`spec/data.md`) | `GET /api/segments/{slug}/scene` | `hero.model.compile` |
 | `street.glb` | glTF 2.0 binary: ground, kerbs, frontage, fixed furniture, 2 baked atlases. Metres, +Y up. No sky, no dynamic obstacles, no runner | `GET /api/segments/{slug}/model.glb` | `hero.export.glb.write_glb` |
-| `street.manifest.json` | all non-geometry data: frame, reference line, lanes, cross-section, colliders, tokens, entities, spawn hints, attribution, embedded gameplay | `GET /api/segments/{slug}/manifest.json` | `hero.export.manifest.build_manifest` |
+| `street.manifest.json` | all non-geometry data: frame, reference line, lanes, cross-section, colliders, scenery (non-colliding 3D props: parked vehicles, stalls, carts the model saw, `{id, type, variant, s, t, yaw_deg, size_m, confidence}`), tokens, entities, spawn hints, attribution, embedded gameplay | `GET /api/segments/{slug}/manifest.json` | `hero.export.manifest.build_manifest` |
 | `gameplay.json` | game rules as data (also embedded in the manifest) | `GET /api/gameplay.json` | `src/hero/export/gameplay.json` |
 | `street.xodr` | OpenDRIVE 1.7, **best-effort byproduct, not exposed in the UI** (§8) | `GET /api/segments/{slug}/street.xodr` | `hero.export.xodr.build_xodr` |
 

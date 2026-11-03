@@ -212,6 +212,10 @@ def build_manifest(
         "confidence": r3(o.confidence), "latlon": {"lat": r6(o.latlon.lat), "lon": r6(o.latlon.lon)},
         "tile_px": [r3(v) for v in o.tile_px] if o.tile_px else None,
     } for o in plan.objects]
+    scenery = [{
+        "id": sc.id, "type": sc.type, "variant": sc.variant, "s": r3(sc.s), "t": r3(T(sc.lat)), "yaw_deg": r3(sc.yaw_deg),
+        "size_m": _size(sc.size_m), "confidence": r3(sc.confidence),
+    } for sc in getattr(plan, "scenery", [])]
     tokens = [{
         "id": t.id, "s": r3(t.x_m), "lane": int(t.lane), "reason": t.reason.value,
         "latlon": {"lat": r6(t.latlon.lat), "lon": r6(t.latlon.lon)}, "tile_px": [r3(v) for v in t.tile_px],
@@ -247,6 +251,7 @@ def build_manifest(
         "frontage": _frontage(plan),
         "entities": entities,
         "colliders": colliders,
+        "scenery": scenery,
         "tokens": tokens,
         "spawn_hints": {"density": sh.density, "type_weights": dict(sh.type_weights)},
         "interpolated": [{"what": i.what, "side": i.side, "s_from": r3(i.s_from), "s_to": r3(i.s_to), "method": i.method, "note": i.note}

@@ -1028,6 +1028,57 @@
       "title": "ReferenceLineM",
       "type": "object"
     },
+    "SceneryM": {
+      "additionalProperties": false,
+      "description": "A non-colliding 3D prop at a dynamic-context entity the model saw (parked vehicle, stall, cart, debris).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "variant": {
+          "default": "",
+          "title": "Variant",
+          "type": "string"
+        },
+        "s": {
+          "title": "S",
+          "type": "number"
+        },
+        "t": {
+          "title": "T",
+          "type": "number"
+        },
+        "yaw_deg": {
+          "default": 0.0,
+          "title": "Yaw Deg",
+          "type": "number"
+        },
+        "size_m": {
+          "$ref": "#/$defs/SizeMM"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "s",
+        "t",
+        "size_m",
+        "confidence"
+      ],
+      "title": "SceneryM",
+      "type": "object"
+    },
     "SegmentM": {
       "additionalProperties": false,
       "properties": {
@@ -1223,6 +1274,13 @@
         "$ref": "#/$defs/ColliderM"
       },
       "title": "Colliders",
+      "type": "array"
+    },
+    "scenery": {
+      "items": {
+        "$ref": "#/$defs/SceneryM"
+      },
+      "title": "Scenery",
       "type": "array"
     },
     "tokens": {

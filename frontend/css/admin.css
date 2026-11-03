@@ -297,3 +297,8 @@ tr.removed td.desc, tr.removed td:first-child, p.removed { text-decoration: line
 .q-bins { display: flex; gap: 2px; flex-wrap: wrap; margin: 6px 0; }
 .q-bin { display: inline-flex; flex-direction: column; align-items: center; font-size: .72rem; min-width: 40px; padding: 2px 4px; border-radius: 4px; background: #12151b; }
 .q-bin.up { outline: 1px solid var(--accent); }
+
+/* Add-imagery: the detailed knobs live behind a disclosure; the default is the full-detail rendition. */
+details.advanced { margin: .5rem 0 .75rem; }
+details.advanced > summary { cursor: pointer; color: var(--muted, #667); font-size: .9rem; }
+details.advanced[open] > summary { margin-bottom: .5rem; }

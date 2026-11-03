@@ -205,7 +205,7 @@ def test_street_view_panoramas_are_projected_onto_the_street_when_the_export_sti
     assert info["road"] == "MeshBasicMaterial"                      # the ground is the frozen photo: it never swims
     assert info["frontage"] == "ShaderMaterial" and info["kerb"] == "ShaderMaterial"   # walls: live projection
     assert info["poles"] == "MeshLambertMaterial"                   # furniture / obstacles stay lit models
-    assert not info["decals"]                                       # painted crossings are in the photo already
+    assert info["decals"]                                           # decals stay: a drain decal marks a collider
     assert info["hasDome"] and not info["skyVisible"]
     assert info["fog"]["near"] >= 100                               # the photo carries its own haze
     page.click("#start")

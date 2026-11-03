@@ -1,6 +1,6 @@
 // play_data.js: the ONLY place that knows both worlds. Turns a manifest (v3) or a legacy v1/v2 scene into the
 // frame-agnostic `playData` the Runner / spawner / dynamic layer consume:
-//   { slug, source: 'manifest'|'legacy', length_m, track, colliders, tokens, spawnInput, lanes }
+//   { slug, source: 'manifest'|'legacy', length_m, track, colliders, tokens, spawnInput, lanes, scenery }
 //   colliders[i] = { id, entity_id, type, label, s, x_m, length_m, lanes[], action, size_m, confidence, ... }   (s === x_m)
 //   tokens[i]    = { id, s, x_m, lane, reason }                                                              (s === x_m)
 //   spawnInput   = { slug, length_m, density, type_weights, footpath_missing:[[s0,s1]], static:[{s0,s1,lanes,action}],
@@ -46,10 +46,11 @@ export function fromManifest(manifest) {
   const track = new ManifestTrack(manifest);
   const slug = manifest.segment.slug;
   const colliders = manifest.colliders.map((c) => ({ ...c, x_m: c.s }));
+  const scenery = (manifest.scenery || []).map((p) => ({ ...p, x_m: p.s, lat: p.t }));   // 3D side props, never colliders
   const tokens = manifest.tokens.map((t) => ({ ...t, x_m: t.s }));
   const keepoutMargin = keepoutMarginOf(manifest.gameplay, 'manifest.gameplay');
   return {
-    slug, source: 'manifest', length_m: track.length, track, colliders, tokens,
+    slug, source: 'manifest', length_m: track.length, track, colliders, tokens, scenery,
     lanes: manifest.lanes.defs.map((d) => ({ ...d })),
     spawnInput: buildSpawnInput({ slug, length_m: track.length, hints: manifest.spawn_hints, stations: track.stations, colliders, keepoutMargin }),
   };

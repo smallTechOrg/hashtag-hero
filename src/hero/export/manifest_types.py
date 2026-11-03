@@ -201,6 +201,19 @@ class EntityM(_S):
     description: str = ""
 
 
+class SceneryM(_S):
+    """A non-colliding 3D prop at a dynamic-context entity the model saw (parked vehicle, stall, cart, debris)."""
+
+    id: str
+    type: str
+    variant: str = ""
+    s: float
+    t: float
+    yaw_deg: float = 0.0
+    size_m: SizeMM
+    confidence: float = Field(ge=0, le=1)
+
+
 class ColliderM(_S):
     id: str
     entity_id: str | None = None
@@ -290,6 +303,7 @@ class ManifestV1(_S):
     frontage: FrontageSides
     entities: list[EntityM]
     colliders: list[ColliderM]
+    scenery: list[SceneryM] = Field(default_factory=list)
     tokens: list[TokenM]
     spawn_hints: SpawnHintsM
     interpolated: list[InterpolatedM]

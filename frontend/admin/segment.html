@@ -80,8 +80,9 @@
           <article class="action-card" data-testid="improve-action-add_imagery">
           <form id="add-imagery" class="add-imagery" data-testid="add-imagery" novalidate>
             <h3>Add more imagery</h3>
-            <p class="muted head-desc">Fetch more Street View and satellite images yourself: choose the spacing, headings and stretch. Costs about $0.007 per Street View image.</p>
+            <p class="muted head-desc">Fetches the full-detail Street View set (every panorama on the street, both passes, 98 frames each) and rebuilds the street. The estimate below is an upper bound; Google charges about $0.007 per frame.</p>
             <div class="quality-slot" data-testid="quality-slot-imagery"></div>
+            <details class="advanced" data-testid="imagery-advanced"><summary>Advanced options (spacing, headings, tilts, zoom, stretch)</summary>
             <div class="field"><label for="i-spacing">Street View spacing: <output class="spacing-out"></output> (denser = more images)</label>
               <input id="i-spacing" name="spacing" type="range" min="4" max="40" step="1" value="10"></div>
             <fieldset class="field"><legend>Headings</legend>
@@ -116,6 +117,7 @@
               <label class="inline">from <input name="s_from" type="number" inputmode="decimal" min="0" step="1" aria-label="From metre"></label>
               <label class="inline">to <input name="s_to" type="number" inputmode="decimal" min="0" step="1" aria-label="To metre"></label>
               <button type="button" class="secondary small" id="clear-range">Whole street</button></fieldset>
+            </details>
             <p class="estimate" data-testid="estimate" role="status"></p>
             <p class="estimate-claude" data-testid="estimate-claude" role="status" aria-live="polite"></p>
             <p class="active-note notice" hidden></p>

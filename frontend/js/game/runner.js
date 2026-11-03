@@ -57,6 +57,7 @@ export class Runner {
     this.lanes = pd.lanes || [];
     this.hazards = (pd.colliders || []).filter((o) => o.action !== 'none').map((o) => (o.x_m === undefined ? { ...o, x_m: o.s } : o));
     this.isDrawn = null;       // (id, type) => bool, set by the page from the obstacle layer: an undrawn obstacle never hurts
+    this.movingHazards = null; // () => hazards of the traffic layer this frame (x_m in the current loop frame)
     this.undrawnSkips = 0;     // QA counter: hits that were skipped because the obstacle was not on screen
     this.tokenDefs = (pd.tokens || []).map((t) => (t.x_m === undefined ? { ...t, x_m: t.s } : t));
     this.spawnInput = { ...(pd.spawnInput || {}), slug: this.slug, length_m: this.lengthM };
@@ -217,7 +218,8 @@ export class Runner {
     const xw = this.xWrapped;
 
     const dyn = this.seed === null ? [] : this._obstaclesFor(this.loops);
-    for (const obj of this.hazards.concat(dyn)) {
+    const moving = this.movingHazards ? this.movingHazards() : [];
+    for (const obj of this.hazards.concat(dyn, moving)) {
       if (!obj.lanes.includes(this.lane)) continue;
       if (!this._overlaps(obj, xw) && (obj.dynamic || !this._overlaps(obj, xw + this.lengthM))) continue;
       if (obj.action === 'jump' && this.airborne) continue;

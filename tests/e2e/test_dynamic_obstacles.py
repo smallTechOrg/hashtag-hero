@@ -183,3 +183,44 @@ def test_an_obstacle_the_layer_did_not_draw_never_hurts(hpage, gameplay):  # noq
       return { blindHit: !!blind, skips, seenHit: !!seen };
     }""")
     assert res["blindHit"] is False and res["skips"] > 0 and res["seenHit"] is True
+
+
+# ------------------------------------------------------------------ moving traffic (traffic.js)
+
+
+def test_traffic_spawns_deterministic_vehicles_that_hurt_only_while_drawn(hpage, gameplay):  # noqa: F811
+    _setup(hpage, seed=5, loop=0, ahead=0.0)
+    res = hpage.evaluate("""async () => {
+      const { THREE, runner, scene3 } = window.__t;
+      const { createTraffic, TRAFFIC } = await import('/js/game/traffic.js?v=2');
+      const run = (seed) => {
+        runner.reset(); runner.startRun();
+        const traffic = createTraffic(THREE, { track: runner.track, runner, slug: 'fixture-curved-street', seed });
+        scene3.add(traffic.group);
+        traffic.reset();
+        runner.movingHazards = () => traffic.hazards();
+        runner.isDrawn = (id) => (id.startsWith('trf-') ? traffic.isDrawn(id) : true);
+        runner.elapsed = 0;
+        const seen = [];
+        let hit = null, undrawn = 0;
+        for (let i = 0; i < 60 * 40 && !hit; i++) {        // 40 s at 60 fps, runner pinned in lane 2 (road)
+          runner.lane = 2; runner.laneFrom = 2;
+          runner.elapsed += 1 / 60; runner.x += 6 / 60;
+          traffic.update();
+          const st = traffic.state;
+          if (st.length) seen.push(st.map((v) => `${v.id}:${v.type}:${v.lane}:${v.oncoming ? 'on' : 'same'}`).join(' '));
+          for (const ev of runner.update(0)) if (ev.type === 'hit' && ev.object.moving) hit = ev;
+        }
+        const names = [...new Set(seen.join(' ').split(' '))].sort();
+        scene3.remove(traffic.group); traffic.dispose();
+        return { names, hit: hit ? { type: hit.object.type, label: hit.object.label, lane: hit.object.lanes[0] } : null, rules: TRAFFIC.types };
+      };
+      const a = run(5), b = run(5), c = run(6);
+      return { a, b, c };
+    }""")
+    a, b, c = res["a"], res["b"], res["c"]
+    assert a["names"] and a["names"] == b["names"], "the same seed replays the same traffic"
+    assert a["names"] != c["names"], "another seed gives other traffic"
+    types = {n.split(":")[1] for n in a["names"]}
+    assert types <= set(a["rules"]) and all(int(n.split(":")[2]) in (1, 2) for n in a["names"]), a["names"]
+    assert a["hit"] is not None and a["hit"]["lane"] == 2 and a["hit"]["type"] in a["rules"]

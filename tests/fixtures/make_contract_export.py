@@ -976,7 +976,7 @@ def build_manifest(plan: StreetPlan, fr: Frame, mesh: StreetMesh, glb: bytes, xo
                   "world_from_st": "hero-st-world/1"},
         "reference_line": {"source": plan.reference_line.source, "osm_way_id": plan.reference_line.osm_way_id,
                            "name": plan.reference_line.name, "length_s": L, "step_m": STEP, "points": points},
-        "lanes": lanes, "cross_section": cross, "frontage": frontage, "entities": ent_rows, "colliders": colliders, "tokens": tokens,
+        "lanes": lanes, "cross_section": cross, "frontage": frontage, "entities": ent_rows, "colliders": colliders, "scenery": [], "tokens": tokens,
         "spawn_hints": {"density": sh.density, "type_weights": dict(sh.type_weights)},
         "interpolated": [{"what": i.what, "side": i.side, "s_from": i.s_from, "s_to": i.s_to, "method": i.method, "note": i.note}
                          for i in plan.interpolated],

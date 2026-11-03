@@ -125,6 +125,7 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
   const fovChecks = FOVS.map((v) => form.querySelector(`[name=fov][value="${v}"]`));
   const sphereCheck = q('sphere');
   const sideCheck = q('side_lookups');
+  let plain = null;   // the form's values before the preset filled it (restored when it is unticked)
   for (const c of pitchChecks) c.checked = c.value === '0';
   for (const c of fovChecks) c.checked = c.value === '90';
   const msg = form.querySelector('.form-msg');
@@ -142,6 +143,9 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
     onPreset(preset, on) {
       maxFields.hidden = !on;
       if (on) {
+        // remember the plain values once, so unticking gives back exactly the form as it was
+        if (!plain) plain = { spacing: spacing.value, hd: hdChecks.map((c) => c.checked), ps: pitchChecks.map((c) => c.checked), fs: fovChecks.map((c) => c.checked),
+          zoom: (form.querySelector('[name=zoom]:checked') || {}).value, extra: extraZoom.value, max: maxImages.value };
         spacing.value = String(preset.sv_spacing_m);
         const have = new Set(preset.headings);
         for (const c of hdChecks) c.checked = have.has(c.value);
@@ -155,6 +159,18 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
         maxImages.value = String(preset.max_images);
         if (sphereCheck) sphereCheck.checked = preset.sphere_fov_deg != null;
         if (sideCheck) sideCheck.checked = (preset.sv_side_offsets_m || []).length > 1;
+      } else {
+        if (sphereCheck) sphereCheck.checked = false;   // a quick pass: the plain request, exactly as before
+        if (sideCheck) sideCheck.checked = false;
+        if (plain) {
+          spacing.value = plain.spacing;
+          hdChecks.forEach((c, i) => { c.checked = plain.hd[i]; });
+          pitchChecks.forEach((c, i) => { c.checked = plain.ps[i]; });
+          fovChecks.forEach((c, i) => { c.checked = plain.fs[i]; });
+          const z = plain.zoom && form.querySelector(`[name=zoom][value="${plain.zoom}"]`);
+          if (z) z.checked = true;
+          extraZoom.value = plain.extra; maxImages.value = plain.max;
+        }
       }
       refresh();
     },

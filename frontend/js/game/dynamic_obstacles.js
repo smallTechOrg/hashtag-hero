@@ -14,6 +14,7 @@
 //     parked at an angle, a pothole has no direction).
 
 const CAPACITY = 16;
+const SCENERY_AHEAD_M = 45;   // props are drawn closer in than hazards: they are many and only decorate the kerb-side
 const AO_HEIGHT_M = 0.55;   // vertices below this are darkened towards AO_FLOOR
 const AO_FLOOR = 0.62;
 const SHADOW_RGB = [0.035, 0.03, 0.025];
@@ -439,7 +440,56 @@ function genericObstacle(k, s) {
   k.shadow(s.w, s.d);
 }
 
-const MODELS = { debris, generic: genericObstacle, parked_car: parkedCar, two_wheeler: twoWheeler, cone, barricade, pothole, stall, low_branch: lowBranch };
+// Open drain / open manhole: a raised concrete lip around a dark pit with standing water and a slab broken off
+// at one corner - it must read as a hole from 10 m away (a flat decal did not).
+function openDrain(k, s) {
+  const W = s.w, D = s.d, lip = 0.1, h = 0.13;
+  k.box(W + 2 * lip, h, lip, 0, h / 2, -D / 2 - lip / 2, 0x9a958c);
+  k.box(W + 2 * lip, h, lip, 0, h / 2, D / 2 + lip / 2, 0x9a958c);
+  k.box(lip, h, D, -W / 2 - lip / 2, h / 2, 0, 0x8f8a81);
+  k.box(lip, h, D, W / 2 + lip / 2, h / 2, 0, 0x8f8a81);
+  k.box(W, 0.02, D, 0, 0.012, 0, 0x121110, { ao: false });                       // the pit
+  k.box(W * 0.9, 0.01, D * 0.8, 0, 0.03, 0, 0x2b3237, { gloss: true, ao: false }); // standing water
+  const slab = new k.THREE.BoxGeometry(W * 0.55, 0.06, D * 0.4);
+  slab.rotateZ(0.35); slab.rotateY(0.3); slab.translate(W * 0.2, 0.14, -D * 0.22);
+  k.add(slab, 0xa5a098);
+  k.box(W * 0.3, 0.05, D * 0.25, -W * 0.25, 0.155, D * 0.3, 0x7d786f);            // a loose broken piece on the lip
+  k.shadow(W + 0.4, D + 0.4, 0.45, 0.3);
+}
+
+// Auto-rickshaw: three-wheeler, yellow-green body, black hood, open sides, a driver silhouette.
+function autoRickshaw(k, s) {
+  const W = s.w, H = s.h, D = s.d;
+  const body = H * 0.42;
+  k.rbox(W * 0.95, body, D * 0.78, 0.08, 0, 0.3 + body / 2, 0.05, 0xf2c500, { paint: true, gloss: true });        // lower body
+  k.rbox(W * 0.7, H * 0.2, D * 0.25, 0.06, 0, 0.3 + H * 0.3, D * 0.42, 0xf2c500, { paint: true, gloss: true });     // nose
+  k.box(W * 0.96, H * 0.08, D * 0.8, 0, H * 0.93, 0, 0x1c1c1c);                                                      // hood roof
+  k.box(0.04, H * 0.45, 0.04, -W * 0.46, H * 0.7, D * 0.32, 0x1c1c1c); k.box(0.04, H * 0.45, 0.04, W * 0.46, H * 0.7, D * 0.32, 0x1c1c1c);
+  k.box(0.04, H * 0.45, 0.04, -W * 0.46, H * 0.7, -D * 0.36, 0x1c1c1c); k.box(0.04, H * 0.45, 0.04, W * 0.46, H * 0.7, -D * 0.36, 0x1c1c1c);
+  k.box(W * 0.9, H * 0.42, 0.03, 0, H * 0.7, -D * 0.38, 0x1c1c1c);                                                   // back panel
+  k.box(W * 0.7, H * 0.34, 0.02, 0, H * 0.68, D * 0.38, 0x8fb4c8, { gloss: true });                                   // windscreen
+  k.wheel(0.22, 0.09, 0, 0.22, D * 0.42); k.wheel(0.22, 0.09, -W * 0.42, 0.22, -D * 0.3); k.wheel(0.22, 0.09, W * 0.42, 0.22, -D * 0.3);
+  k.sphere(0.11, 0, H * 0.72, D * 0.1, 0x4a3326); k.box(0.3, 0.3, 0.2, 0, H * 0.5, D * 0.1, 0xd8d2c4);                  // driver
+  k.shadow(W, D, 0.5, 0.3);
+}
+
+// Cow: a Bengaluru street cow, slow and unbothered - barrel body, legs, neck, head with horns, a tail.
+function cow(k, s) {
+  const W = s.w, H = s.h, D = s.d, legH = H * 0.45, bodyH = H * 0.4;
+  const coat = 0xc9b8a6;
+  k.blob(0.5, 0, legH + bodyH / 2, 0, coat, W, bodyH, D * 0.9, { paint: true });                                      // body
+  for (const [x, z] of [[-W * 0.3, D * 0.35], [W * 0.3, D * 0.35], [-W * 0.3, -D * 0.35], [W * 0.3, -D * 0.35]]) k.cyl(0.06, 0.07, legH, x, legH / 2, z, 0xb3a28f);
+  k.cyl(0.11, 0.16, D * 0.3, 0, legH + bodyH * 0.8, D * 0.55, 0xbfae9b, 'z', 10, { paint: true });                   // neck
+  k.blob(0.5, 0, legH + bodyH * 0.9, D * 0.72, coat, 0.28, 0.26, 0.4, { paint: true });                              // head
+  k.cyl(0.015, 0.025, 0.14, -0.1, legH + bodyH * 1.1, D * 0.68, 0xe7e2d8); k.cyl(0.015, 0.025, 0.14, 0.1, legH + bodyH * 1.1, D * 0.68, 0xe7e2d8); // horns
+  k.box(0.1, 0.03, 0.06, -0.14, legH + bodyH * 0.95, D * 0.7, 0xa8978a); k.box(0.1, 0.03, 0.06, 0.14, legH + bodyH * 0.95, D * 0.7, 0xa8978a); // ears
+  k.cyl(0.02, 0.03, bodyH * 0.9, 0, legH + bodyH * 0.55, -D * 0.5, 0xb3a28f);                                           // tail
+  k.sphere(0.06, 0, legH + bodyH * 0.95, -D * 0.62, coat, 1.2, 1.2, 1.2, { paint: true });
+  k.shadow(W * 1.1, D, 0.45, 0.3);
+}
+
+const MODELS = { debris, generic: genericObstacle, parked_car: parkedCar, two_wheeler: twoWheeler, cone, barricade, pothole, stall, low_branch: lowBranch,
+  open_drain: openDrain, auto: autoRickshaw, cow };
 
 function genericModel(k, s) { k.rbox(s.w, s.h, s.d, 0.05, 0, s.h / 2, 0, 0x8a8f96); k.shadow(s.w, s.d); }
 
@@ -511,14 +561,18 @@ export function createObstacleMaterials(THREE) {
 // so nothing ever hurts without being visible. Furniture types (pole, tree, bin, bollard, signboard, railing, bus stop,
 // manhole) are drawn by the glb at their own position and are skipped.
 const STATIC_MODEL = {
-  low_branch: 'low_branch', debris: 'debris', pothole: 'pothole', drain: 'pothole', vendor_stall: 'stall',
+  low_branch: 'low_branch', debris: 'debris', pothole: 'pothole', drain: 'open_drain', manhole: 'open_drain', vendor_stall: 'stall',
   parked_vehicle: 'parked_car', two_wheeler: 'two_wheeler', speed_breaker: 'generic', other: 'generic',
 };
-const STATIC_BASE_SIZE = { debris: { w: 1.0, h: 0.4, d: 1.0 }, generic: { w: 1.0, h: 1.0, d: 1.0 } };
+const STATIC_BASE_SIZE = { debris: { w: 1.0, h: 0.4, d: 1.0 }, generic: { w: 1.0, h: 1.0, d: 1.0 }, open_drain: { w: 0.8, h: 0.15, d: 1.0 },
+  auto: { w: 1.4, h: 1.75, d: 2.6 }, cow: { w: 0.7, h: 1.4, d: 2.0 } };
+export const STATIC_BASE_SIZES = STATIC_BASE_SIZE;
+// Scenery props (manifest.scenery: dynamic-context entities the model saw) use the same kit; never colliders.
+const SCENERY_MODEL = { parked_vehicle: 'parked_car', vendor_stall: 'stall', debris: 'debris', other: 'generic' };
 export const STATIC_HAZARD_MODELS = STATIC_MODEL;
 
-/** createDynamicLayer(THREE, { scene, track, runner }) -> { group, update, reset, dispose } */
-export function createDynamicLayer(THREE, { scene, track, runner }) {
+/** createDynamicLayer(THREE, { scene, track, runner, scenery }) -> { group, update, reset, dispose } */
+export function createDynamicLayer(THREE, { scene, track, runner, scenery = [] }) {
   const gp = runner && runner.gp;
   if (!gp || !gp.obstacle_types) throw new Error('createDynamicLayer: runner.gp (gameplay.json) is required');
   const types = Object.keys(gp.obstacle_types);
@@ -544,9 +598,11 @@ export function createDynamicLayer(THREE, { scene, track, runner }) {
   // static hazards: one extra InstancedMesh per model key, named static_<model>
   const statics = [];
   const staticMeshes = {};
-  for (const h of (runner.hazards || [])) {
-    let key = STATIC_MODEL[h.type];
-    if (h.type === 'parked_vehicle' && /two|bike|scooter/i.test(`${h.label || ''}`)) key = 'two_wheeler';
+  const props = [...(runner.hazards || []).map((h) => ({ h, collide: true })),
+    ...scenery.map((p) => ({ h: { ...p, label: p.variant || p.type }, collide: false }))];
+  for (const { h, collide } of props) {
+    let key = collide ? STATIC_MODEL[h.type] : SCENERY_MODEL[h.type];
+    if (h.type === 'parked_vehicle' && /two|bike|scooter/i.test(`${h.label || ''} ${h.variant || ''}`)) key = 'two_wheeler';
     if (!key) continue;
     const base = (gp.obstacle_types[key] && gp.obstacle_types[key].size_m) || STATIC_BASE_SIZE[key] || STATIC_BASE_SIZE.generic;
     if (!staticMeshes[key]) {
@@ -561,7 +617,7 @@ export function createDynamicLayer(THREE, { scene, track, runner }) {
     }
     const sz = h.size_m || base;
     const clamp = (v) => Math.max(0.5, Math.min(2.0, v));
-    statics.push({ h, key, scale: new THREE.Vector3(clamp(sz.w / base.w), clamp(sz.h / base.h), clamp(sz.d / base.d)) });
+    statics.push({ h, key, collide, scale: new THREE.Vector3(clamp(sz.w / base.w), clamp(sz.h / base.h), clamp(sz.d / base.d)) });
   }
   if (scene && scene.add) scene.add(group);
 
@@ -627,23 +683,24 @@ export function createDynamicLayer(THREE, { scene, track, runner }) {
         for (const lp of [loop - 1, loop, loop + 1]) {
           if (lp < 0) continue;
           const xa = lp * L + h.x_m;
-          if (xa + h.length_m < x - behind || xa > x + ahead) continue;
+          if (xa + (h.length_m || 0) < x - behind || xa > x + (st.collide ? ahead : SCENERY_AHEAD_M)) continue;
           const mesh = staticMeshes[st.key];
           const i = sc[st.key] || 0;
           if (i >= CAPACITY) continue;
-          const xs = h.x_m + h.length_m / 2;
+          const len = h.length_m || 0;
+          const xs = h.x_m + len / 2;
           const lanes = h.lanes && h.lanes.length ? h.lanes : [0];
-          const lat = lanes.reduce((a, l) => a + track.laneLat(xs, l), 0) / lanes.length;
-          const w = track.world(xa + h.length_m / 2, lat);
-          const fy = lanes.includes(0) && lanes.length === 1 ? groundY({ lane: 0, x_m: h.x_m, length_m: h.length_m }) : 0;
+          const lat = st.collide ? lanes.reduce((a, l) => a + track.laneLat(xs, l), 0) / lanes.length : h.lat;
+          const w = track.world(xa + len / 2, lat);
+          const fy = st.collide && lanes.includes(0) && lanes.length === 1 ? groundY({ lane: 0, x_m: h.x_m, length_m: len }) : 0;
           pos.set(w.x, fy, w.z);
-          quat.setFromAxisAngle(up, -w.theta);
+          quat.setFromAxisAngle(up, -w.theta + (st.collide ? 0 : (h.yaw_deg || 0) * Math.PI / 180));
           mat.compose(pos, quat, st.scale);
           mesh.setMatrixAt(i, mat);
           const pal = PALETTES[st.key] || [0xffffff], c = new THREE.Color(pal[(h.id || '').length % pal.length]);
           mesh.instanceColor.setXYZ(i, c.r, c.g, c.b);
           sc[st.key] = i + 1;
-          lastStatic.push(h.id);
+          if (st.collide) lastStatic.push(h.id);
         }
       }
     }

@@ -8,6 +8,7 @@ import { api } from '/js/api.js?v=3';
 import { Runner } from '/js/game/runner.js?v=4';
 import { loadGameplay } from '/js/game/gameplay.js';
 import { createDynamicLayer } from '/js/game/dynamic_obstacles.js';
+import { createTraffic } from '/js/game/traffic.js?v=2';
 import { attachControls } from '/js/game/controls.js?v=4';
 import { createHud } from '/js/game/hud.js?v=4';
 import { renderResults } from '/js/game/results.js?v=4';
@@ -16,7 +17,7 @@ import { fromManifest, fromLegacyScene, resultsScene } from '/js/game/play_data.
 import { createAtmosphere, createAoBlob } from '/js/game/atmosphere.js?v=2';
 import { createRunnerAvatar } from '/js/game/runner_avatar.js';
 import { createCameraRig, CAM_BACK_M } from '/js/game/camera_rig.js?v=1';
-import { createPanoBackdrop, fetchPanoramas } from '/js/game/pano_backdrop.js?v=4';
+import { createPanoBackdrop, fetchPanoramas } from '/js/game/pano_backdrop.js?v=5';
 import { createBudget } from '/js/game/budget.js?v=1';
 
 const MAX_DT_S = 0.1;
@@ -34,7 +35,7 @@ const state = {
   distance_m: 0, score: 0, tokens: 0, lane: 0, lane_name: 'footpath', action: 'none', loops: 0, speed: 0,
   crashed_into: null, elapsed_s: 0, run_post: null, results: null,
 };
-let scene = null, playData = null, manifest = null, runner = null, view = null, layer = null, gameplay = null;
+let scene = null, playData = null, manifest = null, runner = null, view = null, layer = null, gameplay = null, traffic = null;
 let source = null;   // 'glb' | 'legacy'
 let pano = null;     // the Street View backdrop (glb streets with panoramas), see pano_backdrop.js
 
@@ -84,8 +85,19 @@ window.__hero = {
    *  on screen. `godmode` keeps the health up so a drive can cover whole loops without ending in the results. */
   qa: {
     godmode: false,
-    drawn() { return layer ? { dynamic: layer.visibleIds, static: layer.visibleStaticIds } : { dynamic: [], static: [] }; },
+    drawn() {
+      const t = traffic ? traffic.state.filter((v) => traffic.isDrawn(v.id)).map((v) => v.id) : [];
+      return layer ? { dynamic: [...layer.visibleIds, ...t], static: layer.visibleStaticIds } : { dynamic: t, static: [] };
+    },
     get undrawnSkips() { return runner ? runner.undrawnSkips : 0; },
+    /** What is under a screen point (NDC -1..1): the nearest mesh name, its material and the hit distance. */
+    pick(nx, ny) {
+      const rc = new THREE.Raycaster();
+      rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
+      const hits = rc.intersectObjects(three.children, true).filter((h) => h.object.name !== 'PanoSky' && h.object.name !== 'Sky');
+      return hits.slice(0, 3).map((h) => ({ name: h.object.name, material: h.object.material && h.object.material.name, d: Math.round(h.distance * 10) / 10,
+        uv: h.uv ? [Math.round(h.uv.x * 1000) / 1000, Math.round(h.uv.y * 1000) / 1000] : null, y: Math.round(h.point.y * 10) / 10 }));
+    },
     screen(s, lat, y = 0.8) {
       if (!runner) return null;
       const w = runner.track.world(s, lat);
@@ -95,7 +107,8 @@ window.__hero = {
   },
   get dynamic() {
     if (!runner) return null;
-    return { run_number: runner.runNumber ?? null, seed: runner.seed ?? null, obstacles: runner.activeObstacles(), rules: gameplay ? gameplay.spawner : null };
+    return { run_number: runner.runNumber ?? null, seed: runner.seed ?? null, obstacles: runner.activeObstacles(), rules: gameplay ? gameplay.spawner : null,
+      traffic: traffic ? traffic.state : [] };
   },
 };
 
@@ -193,6 +206,7 @@ function frame(ts) {
   if (runner) {
     view.update(runner.xWrapped, runner.elapsed);
     layer.update();
+    if (traffic) traffic.update();
     placeRunner();
     if (runnerMesh && state.phase === 'running') runnerMesh.visible = !runner.invulnerable || Math.floor(runner.elapsed * 12) % 2 === 0;
   }
@@ -271,6 +285,7 @@ function startRun() {
   showPanel(null);
   runner.startRun();      // fixes seed / run number and generates the first dynamic obstacles
   layer.reset();
+  traffic.reset();
   hud.reset();
   hud.show();
   lastTs = 0;
@@ -281,6 +296,7 @@ function runAgain() {
   clearTimeout(crashTimer);
   runner.reset();
   layer.reset();
+  traffic.reset();
   view.showAllTokens();
   runnerMesh.rotation.x = 0;
   runnerMesh.visible = true;
@@ -426,9 +442,14 @@ async function boot() {
   }
   runner = new Runner(playData, { gameplay, seed });
   if (layer) { three.remove(layer.group); layer.dispose(); }
-  layer = createDynamicLayer(THREE, { scene: sc, track: runner.track, runner });
-  runner.isDrawn = (id, type) => layer.isDrawn(id, type);   // nothing hurts without being visible
+  layer = createDynamicLayer(THREE, { scene: sc, track: runner.track, runner, scenery: playData.scenery || [] });
   three.add(layer.group);
+  if (traffic) { three.remove(traffic.group); traffic.dispose(); }
+  traffic = createTraffic(THREE, { track: runner.track, runner, slug, seed });
+  three.add(traffic.group);
+  runner.movingHazards = () => traffic.hazards();
+  // nothing hurts without being visible: a hazard counts only when its layer drew it this frame
+  runner.isDrawn = (id, type) => (id.startsWith('trf-') ? traffic.isDrawn(id) : layer.isDrawn(id, type));
   rig = createCameraRig(camera, runner.track);
   rig.reset(runner.track.laneLat(0, 0));
   if (!hud) hud = createHud();

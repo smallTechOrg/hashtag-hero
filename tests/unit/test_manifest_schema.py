@@ -23,7 +23,7 @@ def test_standin_manifest_validates_and_keeps_key_order():
     d = manifest_dict()
     m = ManifestV1.model_validate(d)
     assert list(d) == ["schema", "build", "segment", "frame", "reference_line", "lanes", "cross_section", "frontage", "entities",
-                       "colliders", "tokens", "spawn_hints", "interpolated", "loop", "mesh_stats", "attribution", "gameplay",
+                       "colliders", "scenery", "tokens", "spawn_hints", "interpolated", "loop", "mesh_stats", "attribution", "gameplay",
                        "gameplay_sha256"]
     assert m.schema_ == "hero-street-manifest/1" and m.frame.travel_at_s0 == "-Z"
     assert list(m.dump()) == list(d)

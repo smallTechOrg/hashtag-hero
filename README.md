@@ -306,3 +306,7 @@ The vision and review models are configurable via `HERO_VISION_MODEL` / `HERO_RE
 slug passes. On 2026-10-30 `claude-sonnet-5-5` passed `auto_tool` and `json_text` (failed `forced_tool`), so it is the default and the
 client uses the non-forced modes for it (see `NOTES.md`). `claude-sonnet-4-5` remains selectable until its EOL.
 `src/hero/llm/prices.json` carries a `claude-sonnet-5-5` row (rate assumed equal to 4-5; verify).
+
+## Running it in the cloud
+
+Cloud Run + a GCS bucket for the files + Cloud SQL for the database: see `docs/deploy-cloud-run.md` (`deploy/cloudrun.sh`, `.github/workflows/deploy-cloudrun.yml`).

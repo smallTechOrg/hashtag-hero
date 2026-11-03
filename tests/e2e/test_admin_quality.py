@@ -48,6 +48,8 @@ def imagery_card(page: Page):
 def test_fill_gaps_preview_posts_the_model_and_reruns_when_the_dropdown_changes(live_server: str, page: Page):
     api = _segment(page, live_server, api_with_opus())
     card = fill_card(page)
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()
+    card.get_by_test_id("max-quality-fill").uncheck()          # the plain, model-aware preview
     card.get_by_test_id("fill-preview").click()
     expect(card.get_by_test_id("fill-totals")).to_contain_text("Model: Sonnet 5.5")
     previews = api.posts(f"/segments/{SLUG}/fill-gaps/preview")
@@ -72,11 +74,13 @@ def test_changing_the_model_before_any_preview_does_not_post_one(live_server: st
 # ------------------------------------------------------------------ Max quality: Fill gaps card
 
 
-def test_max_quality_is_off_by_default_and_unchecked_never_changes_the_model(live_server: str, page: Page):
+def test_max_quality_is_on_by_default_and_unticked_never_changes_the_model(live_server: str, page: Page):
     api = _segment(page, live_server, api_with_opus())
     card = fill_card(page)
     cb = card.get_by_test_id("max-quality-fill")
-    expect(cb).not_to_be_checked()
+    expect(cb).to_be_checked()                                                  # full detail is the default
+    expect(card.get_by_test_id("model-select")).to_have_value(OPUS)
+    cb.uncheck()
     expect(card.get_by_test_id("model-select")).to_have_value("claude-sonnet-5-5")
     card.get_by_test_id("fill-preview").click()
     expect(card.get_by_test_id("fill-totals")).to_be_visible()
@@ -87,6 +91,8 @@ def test_max_quality_is_off_by_default_and_unchecked_never_changes_the_model(liv
 def test_max_quality_fills_fields_switches_to_opus_prices_passes_and_rounds_and_can_be_switched_back(live_server: str, page: Page):
     api = _segment(page, live_server, api_with_opus())
     card = fill_card(page)
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()
+    card.get_by_test_id("max-quality-fill").uncheck()
     card.get_by_test_id("fill-preview").click()
     expect(card.get_by_test_id("fill-totals")).to_contain_text("Model: Sonnet 5.5")
     plain = money(card.get_by_test_id("fill-totals").inner_text(), "Claude")
@@ -120,7 +126,7 @@ def test_max_quality_fills_fields_switches_to_opus_prices_passes_and_rounds_and_
 def test_unchecking_max_quality_restores_the_model_it_switched(live_server: str, page: Page):
     api = _segment(page, live_server, api_with_opus())
     card = fill_card(page)
-    card.get_by_test_id("max-quality-fill").check()
+    expect(card.get_by_test_id("max-quality-fill")).to_be_checked()             # on by default, Opus selected
     expect(card.get_by_test_id("model-select")).to_have_value(OPUS)
     card.get_by_test_id("max-quality-fill").uncheck()
     expect(card.get_by_test_id("model-select")).to_have_value("claude-sonnet-5-5")
@@ -145,9 +151,15 @@ def test_max_quality_fills_the_add_imagery_form_and_the_estimate_scales_with_pas
     api = _segment(desktop, live_server, api_with_opus())
     form = desktop.get_by_test_id("add-imagery")
     est = form.get_by_test_id("estimate-claude")
+    # the default is the full-detail rendition: the preset is on as soon as it loads
+    expect(form.get_by_test_id("max-quality-imagery")).to_be_checked()
+    expect(est).to_contain_text("3 extraction passes, 4 review rounds")
+    maxq_default_total = float(est.get_attribute("data-total"))
+    form.get_by_test_id("max-quality-imagery").uncheck()
     expect(est).to_contain_text("1 extraction pass, 0 review rounds")
     plain_total = float(est.get_attribute("data-total"))
     expect(form.get_by_test_id("max-fields")).to_be_hidden()
+    assert maxq_default_total > plain_total
 
     form.get_by_test_id("max-quality-imagery").check()
 
@@ -168,6 +180,7 @@ def test_max_quality_fills_the_add_imagery_form_and_the_estimate_scales_with_pas
     expect(est).to_contain_text("8 review rounds")
     assert float(est.get_attribute("data-total")) > maxq_total
     form.get_by_test_id("q-rounds-imagery").fill("4")
+    form.get_by_test_id("imagery-advanced").evaluate("d => { d.open = true; }")   # the knobs live behind "Advanced"
     form.locator("[name=spacing]").fill("14")  # fields stay editable
     expect(form.locator(".spacing-out")).to_have_text("14 m")
 
@@ -185,6 +198,8 @@ def test_max_quality_fills_the_add_imagery_form_and_the_estimate_scales_with_pas
 def test_add_imagery_without_the_preset_sends_exactly_what_it_sent_before(live_server: str, desktop: Page):
     api = _segment(desktop, live_server, api_with_opus())
     form = desktop.get_by_test_id("add-imagery")
+    expect(form.get_by_test_id("max-quality-imagery")).to_be_checked()   # default on ...
+    form.get_by_test_id("max-quality-imagery").uncheck()                 # ... a cheap quick pass is one untick away
     form.get_by_test_id("fetch-generate").click()
     desktop.wait_for_url(re.compile(r"/admin/run\.html\?id="))
     body = api.posts(f"/segments/{SLUG}/generate")[0]

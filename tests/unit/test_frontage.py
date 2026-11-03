@@ -107,22 +107,28 @@ def _wall(t, conf=0.8, eid="ent-0000000aa1"):
 
 
 def test_confident_wall_on_the_building_line_defines_the_facade_line_and_fills_the_skyline():
-    p = plan_of([bld("a", 0, 100, 14, 22)], [_wall(13.6)])
+    p = plan_of([bld("a", 0, 100, 10, 18)], [_wall(9.6)])                   # building line within MAX_SETBACK_M
     g = at(sides(p)["modelled"], 32.0)
     assert (g.kind, g.source, g.entity_id) == ("wall", "entity", "ent-0000000aa1")
-    assert g.lat_from == pytest.approx(13.6 - fr.WALL_HALF_THICKNESS_M)     # within WALL_OFF_LINE_M: stays where detected
+    assert g.lat_from == pytest.approx(9.6 - fr.WALL_HALF_THICKNESS_M)      # within WALL_OFF_LINE_M: stays where detected
     assert g.height_m == 9.0                                                 # raised to the building: no sky notch above a 2.2 m wall
     assert at(sides(p)["modelled"], 10.0).building_id == "a" and at(sides(p)["modelled"], 90.0).building_id == "a"
 
 
 def test_confident_wall_far_in_front_of_the_building_line_is_merged_into_it_not_a_wedge():
-    p = plan_of([bld("a", 0, 100, 14, 22)], [_wall(8.0)])
+    p = plan_of([bld("a", 0, 100, 10, 18)], [_wall(7.6)])
     g = at(sides(p)["modelled"], 32.0)
     assert (g.kind, g.source, g.entity_id, g.interpolated) == ("wall", "entity", "ent-0000000aa1", True)
-    assert g.lat_from == pytest.approx(14.0) and g.lat_to == pytest.approx(14.0)   # the median building line
+    assert g.lat_from == pytest.approx(10.0) and g.lat_to == pytest.approx(10.0)   # the median building line
     assert g.height_m == 9.0
     nb = [x for x in sides(p)["modelled"] if x is not g]
-    assert all(abs(x.lat_from - 14.0) < 1e-6 for x in nb)                          # no lateral step anywhere
+    assert all(abs(x.lat_from - 10.0) < 1e-6 for x in nb)                          # no lateral step anywhere
+
+
+def test_the_facade_plane_stays_within_the_setback_of_the_walkway():
+    p = plan_of([bld("a", 0, 100, 22, 30)])                                  # an OSM footprint far behind its compound
+    for g in sides(p)["modelled"]:
+        assert g.lat_from <= 6.5 + fr.MODELLED_CLEAR_M + fr.MAX_SETBACK_M + 1e-6 and g.lat_from > 6.5
 
 
 def test_weak_wall_detections_do_not_define_the_facade():

@@ -22,14 +22,15 @@ Interpretation notes
 from __future__ import annotations
 
 from bisect import bisect_right
-from typing import Callable, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from hero.export.gameplay_types import GameplayV1
-from hero.model import dynamic, frontage, furniture, ground
+from hero.model import catalogue, dynamic, frontage, furniture, ground
 from hero.model.compile import KERB_BASE_M, _Core, _core, _r, rules_from_gameplay
 from hero.model.diff import model_hash
 from hero.model.gap_types import GapReport
 from hero.model.street_plan_types import (
+    SceneryPlan,
     FidelityBin,
     FrontagePlan,
     FrontageSidePlan,
@@ -202,14 +203,46 @@ def plan_from_core(c: _Core, *, fidelity: FidelityMap, gaps: GapReport, textures
     fur = furniture.plan_furniture(model, sign=c.sign, dynamic_ids=dyn_ids, objects=c.objects, fidelity=fidelity,
                                    tints=textures.tints if textures else None, carriageway=carriageway_at)
     _, dyn_ctx = dynamic.dynamic_context(c.dynamic, length, gameplay)
+    lanes_t = [st.lane for st in c.stations if st.lane] or [[0.0, 0.0, 0.0]]
+    band = (min(min(l) for l in lanes_t) - SCENERY_TRACK_CLEARANCE_M, max(max(l) for l in lanes_t) + SCENERY_TRACK_CLEARANCE_M)
+    scenery = plan_scenery(c.dynamic, sign=c.sign, length=length, track_band=band)
     fid = PlanFidelity(overall_level=fidelity.overall.level, score=fidelity.overall.score,
                        bins=[FidelityBin(index=b.index, s_from=b.s_from, s_to=b.s_to, level=b.level) for b in fidelity.bins])
     return StreetPlan(
         slug=slug, name=name or rl.name or slug, city=city, model_version=model.version, model_hash=model_hash(model),
         footpath_side=c.side, length_m=length, frame=frame, reference_line=reference, corridor_step_m=2.5,  # type: ignore[arg-type]
         stations=stations, ground_tex=gtex, frontage=FrontagePlan(step_m=frontage.CELL_M, sides=sides), furniture=fur,
-        objects=objects, tokens=c.tokens, dynamic_context=dyn_ctx, fidelity=fid,
+        objects=objects, tokens=c.tokens, dynamic_context=dyn_ctx, fidelity=fid, scenery=scenery,
         interpolated=[i for i in gaps.interpolations if i.what != "furniture_unknown"])
+
+
+SCENERY_TYPES = {"parked_vehicle", "vendor_stall", "debris", "other"}
+SCENERY_MIN_CONFIDENCE = 0.4
+SCENERY_TRACK_CLEARANCE_M = 1.5   # a prop never stands on the runner's three tracks (it would be passed through)
+
+
+def plan_scenery(dynamic: Sequence[tuple[Any, int]], *, sign: int, length: float,
+                 track_band: tuple[float, float] | None = None) -> list[SceneryPlan]:
+    """3D props for the dynamic-context entities the model saw (see ``SceneryPlan``): confident ones with a model,
+    outside ``track_band`` (game lateral ``(lo, hi)`` of the three tracks plus clearance)."""
+    out: list[SceneryPlan] = []
+    for e, _lane in dynamic:
+        t = e.type.value
+        if t not in SCENERY_TYPES or e.confidence < SCENERY_MIN_CONFIDENCE or e.state is EntityState.removed:
+            continue
+        lat = sign * e.position.t
+        if track_band is not None and track_band[0] <= lat <= track_band[1]:
+            continue
+        w0, h0, d0 = catalogue.default_size_m(e.type, e.subtype, e.extent.length_s)
+        w = e.extent.width_t if e.extent.width_t > 0 else w0
+        h = e.height_m if e.height_m is not None else h0
+        d = e.extent.length_s if e.extent.length_s > 0 else d0
+        out.append(SceneryPlan(id=e.id, type=t, variant=e.subtype or "", s=round(min(max(e.position.s, 0.0), length - 1e-3), 3),
+                               lat=round(sign * e.position.t, 3), yaw_deg=round(e.orientation_deg or 0.0, 3),
+                               size_m={"w": round(max(w, 0.0), 3), "h": round(max(h, 0.0), 3), "d": round(max(d, 0.0), 3)},
+                               confidence=round(min(max(e.confidence, 0.0), 1.0), 3)))
+    out.sort(key=lambda x: (x.s, x.id))
+    return out
 
 
 def plan_street(model: CanonicalModel, *, observations: Mapping[str, Observation], fidelity: FidelityMap,

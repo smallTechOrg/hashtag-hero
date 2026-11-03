@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import uvicorn
 
 from hero.app import create_app
@@ -15,7 +17,7 @@ def serve() -> None:
     uvicorn.run(
         "hero.main:app",
         host=settings.host,
-        port=settings.port,
+        port=int(os.environ.get("PORT", settings.port)),   # Cloud Run hands the port over as PORT
         log_level=settings.log_level.lower(),
         access_log=False,  # the request-id middleware emits the http.request line
     )

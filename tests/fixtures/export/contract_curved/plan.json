@@ -1678,6 +1678,7 @@
       "description": "Zebra crossing."
     }
   ],
+  "scenery": [],
   "objects": [
     {
       "id": "blocked-int-0002",
