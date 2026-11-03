@@ -23,7 +23,7 @@ from PIL import Image
 
 from hero.db import model_repo
 from hero.db.model_repo import ObservationCreate
-from hero.imagery.google import EST_COST_USD, FetchedImage, GoogleImagery, SpendCapExceeded
+from hero.imagery.google import EST_COST_USD, FetchedImage, GoogleImagery, SpendCapExceeded, StreetViewMeta
 from hero.imagery.noimagery import looks_like_no_imagery
 from hero.imagery.plan import ImageryPlan, PlannedImage, plan_images
 from hero.llm.errors import UpstreamError
@@ -205,18 +205,32 @@ class _State:
     # -------------------------------------------------------- street view
 
     def station(self, s: float, group: list[PlannedImage]) -> None:
+        """Shoot every panorama found at this station: the centreline look-up plus one per side offset (free
+        metadata calls; Google often has a second pass a few metres over). A panorama already shot at another
+        station is skipped frame by frame (``seen``)."""
         first = group[0]
-        try:
-            meta = self.google.streetview_metadata(first.lat, first.lon)  # free
-        except UpstreamError as exc:
-            self._auth_hint(exc)
-            for item in group:
-                self._skip(item, f"metadata_error: {exc.message[:120]}")
-            return
-        if not meta.ok or not meta.pano_id:
-            for item in group:
-                self._skip(item, meta.status if not meta.ok else "NO_PANO_ID")
-            return
+        panos: dict[str, StreetViewMeta] = {}
+        for offset in self.plan.sv_side_offsets_m:
+            lat, lon = (first.lat, first.lon) if not offset else self.ref.point_at(s, offset)
+            try:
+                meta = self.google.streetview_metadata(lat, lon)  # free
+            except UpstreamError as exc:
+                self._auth_hint(exc)
+                if not panos and offset == self.plan.sv_side_offsets_m[-1]:
+                    for item in group:
+                        self._skip(item, f"metadata_error: {exc.message[:120]}")
+                    return
+                continue
+            if meta.ok and meta.pano_id and meta.pano_id not in panos:
+                panos[meta.pano_id] = meta
+            elif not panos and offset == self.plan.sv_side_offsets_m[-1] and not (meta.ok and meta.pano_id):
+                for item in group:
+                    self._skip(item, meta.status if not meta.ok else "NO_PANO_ID")
+                return
+        for meta in panos.values():
+            self._shoot(first, group, meta)
+
+    def _shoot(self, first: PlannedImage, group: list[PlannedImage], meta: StreetViewMeta) -> None:
         cam_lat = meta.lat if meta.lat is not None else first.lat
         cam_lon = meta.lon if meta.lon is not None else first.lon
         proj = self.ref.to_st(cam_lat, cam_lon)

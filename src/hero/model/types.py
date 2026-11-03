@@ -165,6 +165,10 @@ class _M(BaseModel):
 # ------------------------------------------------------------------ observation (evidence record)
 
 
+SPHERE_TILE_MAX_FOV = 45.0
+SPHERE_TILE_MAX_PITCH = 45.0
+
+
 class Observation(_M):
     """One row of ``observations`` (spec/data.md). Never updated after insert."""
 
@@ -205,6 +209,14 @@ class Observation(_M):
     @property
     def is_street_level(self) -> bool:
         return self.kind in (ObservationKind.streetview, ObservationKind.user_photo)
+
+    @property
+    def is_sphere_tile(self) -> bool:
+        """A narrow / steep Street View grid frame shot for the stitched sphere (the photo-real street), not for
+        perception: it is never sent to Claude (``SPHERE_TILE_MAX_FOV`` / ``SPHERE_TILE_MAX_PITCH``)."""
+        return (self.kind is ObservationKind.streetview
+                and ((self.fov_deg is not None and self.fov_deg <= SPHERE_TILE_MAX_FOV)
+                     or abs(self.pitch_deg or 0.0) > SPHERE_TILE_MAX_PITCH))
 
 
 # ------------------------------------------------------------------ reference line

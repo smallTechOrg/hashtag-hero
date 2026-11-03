@@ -10,7 +10,7 @@ Output is sorted by ``(s, id)``.
 
 from __future__ import annotations
 
-from typing import Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 from hero.model import catalogue, describe
 from hero.model.street_plan_types import FIXED_FURNITURE_TYPES, MAX_SIZE_M, FurniturePlan
@@ -19,14 +19,28 @@ from hero.model.scene_v2 import SceneObjectV2
 
 MIN_CONFIDENCE = 0.2
 LENGTH_TYPES = ("railing", "crossing", "drain")
+# Furniture that cannot stand on the carriageway: a tree / pole / bin ... placed more than ROAD_MARGIN_M inside the
+# road is a perception error (a sideways offset misjudged in a frame) and is dropped rather than drawn on the road.
+ROAD_BOUND_TYPES = frozenset({"tree", "pole", "bin", "bollard", "signboard", "bus_stop", "railing"})
+ROAD_MARGIN_M = 0.5
 
 
 def _r(x: float) -> float:
     return round(x + 0.0, 3)
 
 
+def on_carriageway(lat: float, band: tuple[float, float] | None, *, margin: float = ROAD_MARGIN_M) -> bool:
+    """True when ``lat`` lies more than ``margin`` inside the carriageway band ``(lo, hi)`` (game lateral)."""
+    if band is None:
+        return False
+    lo, hi = min(band), max(band)
+    return lo + margin < lat < hi - margin
+
+
 def plan_furniture(model: CanonicalModel, *, sign: int, dynamic_ids: set[str], objects: Sequence[SceneObjectV2],
-                   fidelity: FidelityMap, tints: Mapping[str, str] | None = None) -> list[FurniturePlan]:
+                   fidelity: FidelityMap, tints: Mapping[str, str] | None = None,
+                   carriageway: Callable[[float], tuple[float, float] | None] | None = None) -> list[FurniturePlan]:
+    """``carriageway(s) -> (lo, hi)`` (game lateral) lets the planner drop ROAD_BOUND_TYPES standing on the road."""
     tints = tints or {}
     length = model.reference_line.length_s
     proxies = {o.entity_id: o.id for o in objects if o.entity_id and not o.scenery and o.id == o.entity_id}
@@ -45,6 +59,8 @@ def plan_furniture(model: CanonicalModel, *, sign: int, dynamic_ids: set[str], o
             cw, ch = MAX_SIZE_M[t]
             w, h = min(w, cw), min(h, ch)
         s = _r(min(max(e.position.s, 0.0), length - 1e-3))
+        if carriageway is not None and t in ROAD_BOUND_TYPES and on_carriageway(sign * e.position.t, carriageway(s)):
+            continue
         tint = tints.get(e.id)
         out.append(FurniturePlan(
             id=e.id, type=t, variant=e.subtype or "", s=s, lat=_r(sign * e.position.t), yaw_deg=_r(e.orientation_deg or 0.0),

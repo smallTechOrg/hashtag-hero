@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     sv_headings: str = "forward,back,left,right"  # comma list; see ``sv_headings_list``
     sat_crop_zoom: int = Field(default=20, ge=18, le=21)
     sat_crop_spacing_m: float = Field(default=40.0, gt=0)
-    max_images_per_run: int = Field(default=60, ge=1, le=2000)
+    max_images_per_run: int = Field(default=60, ge=1, le=5000)
     perception_batch_images: int = Field(default=8, ge=1, le=20)
     structured_mode: str = "auto"
     upload_max_mb: float = Field(default=10.0, gt=0)

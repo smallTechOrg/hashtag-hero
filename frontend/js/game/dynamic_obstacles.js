@@ -673,6 +673,13 @@ export function createDynamicLayer(THREE, { scene, track, runner }) {
     group, update, reset, dispose,
     get visibleIds() { return lastIds.slice(); },
     get visibleStaticIds() { return lastStatic.slice(); },
+    /** Was this obstacle drawn in the last update? Furniture hazards (drawn by the glb) always count as drawn;
+     *  a dynamic / modelled hazard only when its instance was emitted (capacity, window or any other reason it was
+     *  not drawn means it must not hurt either: nothing hurts without being visible). */
+    isDrawn(id, type) {
+      if (!STATIC_MODEL[type] && !meshes[type]) return true;
+      return lastIds.includes(id) || lastStatic.includes(id);
+    },
     get drawCalls() {
       return group.children.reduce((n, m) => n + (m.visible ? m.geometry.groups.length : 0), 0);
     },

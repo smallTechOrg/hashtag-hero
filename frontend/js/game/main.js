@@ -16,7 +16,7 @@ import { fromManifest, fromLegacyScene, resultsScene } from '/js/game/play_data.
 import { createAtmosphere, createAoBlob } from '/js/game/atmosphere.js?v=2';
 import { createRunnerAvatar } from '/js/game/runner_avatar.js';
 import { createCameraRig, CAM_BACK_M } from '/js/game/camera_rig.js?v=1';
-import { createPanoBackdrop, fetchPanoramas } from '/js/game/pano_backdrop.js?v=2';
+import { createPanoBackdrop, fetchPanoramas } from '/js/game/pano_backdrop.js?v=4';
 import { createBudget } from '/js/game/budget.js?v=1';
 
 const MAX_DT_S = 0.1;
@@ -80,6 +80,19 @@ window.__hero = {
   },
   /** The Street View backdrop: null when the street has no panoramas (baked textures are shown instead). */
   get pano() { return pano ? pano.state : null; },
+  /** QA probes (the automated test drive): what the obstacle layer drew this frame, and where a street point lands
+   *  on screen. `godmode` keeps the health up so a drive can cover whole loops without ending in the results. */
+  qa: {
+    godmode: false,
+    drawn() { return layer ? { dynamic: layer.visibleIds, static: layer.visibleStaticIds } : { dynamic: [], static: [] }; },
+    get undrawnSkips() { return runner ? runner.undrawnSkips : 0; },
+    screen(s, lat, y = 0.8) {
+      if (!runner) return null;
+      const w = runner.track.world(s, lat);
+      const v = new THREE.Vector3(w.x, y, w.z).project(camera);
+      return { x: v.x, y: v.y, z: v.z, onScreen: v.z < 1 && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1 };
+    },
+  },
   get dynamic() {
     if (!runner) return null;
     return { run_number: runner.runNumber ?? null, seed: runner.seed ?? null, obstacles: runner.activeObstacles(), rules: gameplay ? gameplay.spawner : null };
@@ -164,6 +177,7 @@ function frame(ts) {
   const dt = Math.min(MAX_DT_S, rawDt);
   lastTs = ts;
   if (state.phase === 'running') {
+    if (window.__hero.qa.godmode) runner.health = runner.rg.health_max;   // QA drives never crash
     const events = runner.update(dt);
     for (const ev of events) {
       if (ev.type === 'token') view.hideToken(ev.id);
@@ -413,6 +427,7 @@ async function boot() {
   runner = new Runner(playData, { gameplay, seed });
   if (layer) { three.remove(layer.group); layer.dispose(); }
   layer = createDynamicLayer(THREE, { scene: sc, track: runner.track, runner });
+  runner.isDrawn = (id, type) => layer.isDrawn(id, type);   // nothing hurts without being visible
   three.add(layer.group);
   rig = createCameraRig(camera, runner.track);
   rig.reset(runner.track.laneLat(0, 0));

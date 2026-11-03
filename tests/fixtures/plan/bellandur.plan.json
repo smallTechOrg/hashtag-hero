@@ -4218,26 +4218,6 @@
    "description": "Blue homeopathy clinic signboard above the shopfront."
   },
   {
-   "id": "ent-d9aaef5802",
-   "type": "tree",
-   "variant": "",
-   "s": 99.999,
-   "lat": -1.649,
-   "yaw_deg": 0.0,
-   "size_m": {
-    "w": 0.8,
-    "h": 5.0,
-    "d": 0.8
-   },
-   "length_m": 0.0,
-   "colour_hex": null,
-   "canopy_hex": null,
-   "object_id": null,
-   "confidence": 0.67,
-   "fidelity_level": 2,
-   "description": "Large tree with its trunk on the right footpath beside the wall, branches overhanging the street."
-  },
-  {
    "id": "ent-fe8326f2fb",
    "type": "signboard",
    "variant": "",

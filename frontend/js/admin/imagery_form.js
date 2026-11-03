@@ -11,6 +11,9 @@ const HEADINGS = ['forward', 'back', 'left', 'right', 'forward_left', 'forward_r
 const HEADING_OFFSET = { forward: 0, forward_right: 45, right: 90, back_right: 135, back: 180, back_left: 225, left: 270, forward_left: 315 };
 const PITCHES = [0, -30, 25];
 const FOVS = [90, 50];
+// the sphere tiles of the photo-real street (server: ImageryPlan.sphere_*; the preset owns the values)
+const SPHERE = { fov: 30, step: 20, pitches: [0, -25, -50, 25, 50] };
+const SIDE_OFFSETS = [-4, 0, 4];
 const PANO_SNAP_M = 6; // as the server estimate: a station snaps to the nearest stored panorama
 
 function stationsFor(lo, span, spacing) {
@@ -26,13 +29,22 @@ const quant = (h) => ((Math.round(h / 5) * 5) % 360 + 360) % 360;
  * Pure estimate. observations: [{kind, view, station_s, zoom, pano_id, heading_deg, pitch_deg, fov_deg}] already stored.
  * Every station is shot at headings x pitches x fovs; stations that land on the same stored panorama are one image.
  */
+/** Frames of one panorama as [relative heading name or degrees, pitch, fov, sphere]. */
+export function stationFrames({ headings, pitches = [0], fovs = [90], sphere = null }) {
+  const out = [];
+  for (const f of fovs) for (const p of pitches) for (const h of headings) out.push([h, p, f, false]);
+  if (sphere) for (const p of sphere.pitches) for (let rel = 0; rel < 360; rel += sphere.step) out.push([rel, p, sphere.fov, true]);
+  return out;
+}
+
 export function estimatePlan({ length_s, spacing, headings, zoom, range, maxImages = 60, satSpacing = 40, observations = [],
-  pitches = [0], fovs = [90] }) {
+  pitches = [0], fovs = [90], sphere = null }) {
   const lo = range ? Math.max(0, range.s_from) : 0;
   const hi = range ? Math.min(length_s, range.s_to) : length_s;
   if (!(hi > lo) || !headings.length) return { valid: false, planned: 0, cached: 0, fresh: 0, usd: 0, trimmed: false };
   const span = hi - lo;
-  const nHead = headings.length * pitches.length * fovs.length;
+  const frames = stationFrames({ headings, pitches, fovs, sphere });
+  const nHead = frames.length;
   let nCrops = Math.max(1, Math.ceil(span / satSpacing - 1e-9));
   const budgetNonSv = Math.max(0, maxImages - 2 * nHead);
   if (nCrops + 1 > budgetNonSv) nCrops = Math.max(0, budgetNonSv - 1);
@@ -53,18 +65,15 @@ export function estimatePlan({ length_s, spacing, headings, zoom, range, maxImag
     const pano = near && Math.abs(near.station_s - s) <= PANO_SNAP_M ? near.pano_id : `s${s.toFixed(1)}`;
     // relative heading: stored headings are compass, so offset from the nearest stored forward frame of that pano
     const fwd = sv.find((o) => o.pano_id === pano && o.view === 'forward');
-    for (const f of fovs) {
-      for (const p of pitches) {
-        for (const h of headings) {
-          const head = fwd ? quant((fwd.heading_deg || 0) + HEADING_OFFSET[h]) : h;
-          const key = `${pano}|${head}|${p}|${f}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          // or, as before tilts / zoom existed: a level, wide frame of this view stored at this station
-          if (have.has(key) || (p === 0 && f === 90 && observations.some((o) => o.kind === 'streetview' && o.view === h
-            && o.station_s != null && Math.abs(o.station_s - s) <= 0.6 && !(o.pitch_deg || 0)))) cachedSv += 1;
-        }
-      }
+    for (const [h, p, f, isSphere] of frames) {
+      const rel = isSphere ? h : HEADING_OFFSET[h];
+      const head = fwd ? quant((fwd.heading_deg || 0) + rel) : `${h}`;
+      const key = `${pano}|${head}|${p}|${f}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // or, as before tilts / zoom existed: a level, wide frame of this view stored at this station
+      if (have.has(key) || (!isSphere && p === 0 && f === 90 && observations.some((o) => o.kind === 'streetview' && o.view === h
+        && o.station_s != null && Math.abs(o.station_s - s) <= 0.6 && !(o.pitch_deg || 0)))) cachedSv += 1;
     }
   }
   const svTotal = seen.size;
@@ -114,6 +123,8 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
   for (const c of hdChecks) c.checked = defaults.has(c.value);
   const pitchChecks = PITCHES.map((v) => form.querySelector(`[name=pitch][value="${v}"]`));
   const fovChecks = FOVS.map((v) => form.querySelector(`[name=fov][value="${v}"]`));
+  const sphereCheck = q('sphere');
+  const sideCheck = q('side_lookups');
   for (const c of pitchChecks) c.checked = c.value === '0';
   for (const c of fovChecks) c.checked = c.value === '90';
   const msg = form.querySelector('.form-msg');
@@ -142,6 +153,8 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
         if (z) z.checked = true;
         extraZoom.value = preset.sat_extra_zoom == null ? '' : String(preset.sat_extra_zoom);
         maxImages.value = String(preset.max_images);
+        if (sphereCheck) sphereCheck.checked = preset.sphere_fov_deg != null;
+        if (sideCheck) sideCheck.checked = (preset.sv_side_offsets_m || []).length > 1;
       }
       refresh();
     },
@@ -166,6 +179,17 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
     // only sent when they differ from the defaults (level, wide): the request is then exactly as before
     if (pitches.length && !(pitches.length === 1 && pitches[0] === 0)) body.pitches_deg = pitches;
     if (fovs.length && !(fovs.length === 1 && fovs[0] === 90)) body.fovs_deg = fovs;
+    const preset = (quality && quality.preset) || {};
+    if (sphereCheck && sphereCheck.checked) {
+      body.sphere_fov_deg = preset.sphere_fov_deg || SPHERE.fov;
+      body.sphere_heading_step_deg = preset.sphere_heading_step_deg || SPHERE.step;
+      body.sphere_pitches_deg = preset.sphere_pitches_deg || SPHERE.pitches;
+      // the sphere needs the whole street: lift the image cap to the sphere's worth of frames
+      const need = Math.ceil(getLength() / Number.parseFloat(spacing.value) + 1) * stationFrames({
+        headings: body.headings, pitches, fovs, sphere: { fov: body.sphere_fov_deg, step: body.sphere_heading_step_deg, pitches: body.sphere_pitches_deg } }).length + 40;
+      body.max_images = Math.min(5000, Math.max(need, Number.parseInt(maxImages.value, 10) || 0));
+    }
+    if (sideCheck && sideCheck.checked) body.sv_side_offsets_m = (preset.sv_side_offsets_m && preset.sv_side_offsets_m.length > 1) ? preset.sv_side_offsets_m : SIDE_OFFSETS;
     const r = rangeValue();
     if (r) body.s_range = r;
     if (quality && quality.on()) { // max-quality extras are sent only while the preset is on
@@ -210,9 +234,10 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
     const p = plan();
     const est = estimatePlan({
       length_s: getLength(), spacing: p.sv_spacing_m, headings: p.headings, zoom: p.sat_crop_zoom, range: p.s_range,
-      maxImages: (quality && quality.on() && p.max_images) || lim.max_images_per_run || 60,
+      maxImages: p.max_images || lim.max_images_per_run || 60,
       satSpacing: (quality && quality.on() && p.sat_crop_spacing_m) || lim.sat_crop_spacing_m || 40, observations: getObservations(),
       pitches: p.pitches_deg || [0], fovs: p.fovs_deg || [90],
+      sphere: p.sphere_fov_deg ? { fov: p.sphere_fov_deg, step: p.sphere_heading_step_deg, pitches: p.sphere_pitches_deg } : null,
     });
     const out = form.querySelector('[data-testid=estimate]');
     const noAngles = !pitchChecks.some((c) => c.checked) || !fovChecks.some((c) => c.checked);
@@ -222,7 +247,8 @@ export function createImageryForm({ form, slug, getLength, getObservations, limi
         : p.headings.length ? 'Check the stretch: "to" must be greater than "from".' : 'Pick at least one heading.')
       : `≈ ${est.fresh} new images ≈ ${fmtUsd(est.usd).replace('$', '$')} Google (${est.planned} planned, ${est.cached} already cached${est.trimmed ? '; spacing widened to fit the image cap' : ''})`;
     out.dataset.fresh = bad ? '' : String(est.fresh);
-    framesOut.textContent = String(p.headings.length * (p.pitches_deg || [0]).length * (p.fovs_deg || [90]).length);
+    framesOut.textContent = String(stationFrames({ headings: p.headings, pitches: p.pitches_deg || [0], fovs: p.fovs_deg || [90],
+      sphere: p.sphere_fov_deg ? { fov: p.sphere_fov_deg, step: p.sphere_heading_step_deg, pitches: p.sphere_pitches_deg } : null }).length);
     if (bad) { claudeOut.textContent = ''; } else serverEstimate(p);
     const reason = activeReason();
     const off = bad || !!reason;

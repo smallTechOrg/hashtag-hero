@@ -102,11 +102,12 @@ def build_street_batches(observations: Sequence[Observation], ref: ReferenceLine
                          max_images: int) -> list[StreetBatch]:
     """Contiguous station windows of <= ``max_images`` street-level frames, in deterministic order.
 
-    Only street-level observations with a station are used; order = ``(station_s, view, id)``.
+    Only street-level observations with a station are used (sphere tiles - the narrow grid frames of the stitched
+    photo street - are never sent); order = ``(station_s, view, id)``.
     """
     if max_images < 1:
         raise ValueError("max_images must be >= 1")
-    usable = sorted((o for o in observations if o.is_street_level and o.station_s is not None),
+    usable = sorted((o for o in observations if o.is_street_level and o.station_s is not None and not o.is_sphere_tile),
                     key=lambda o: (round(o.station_s, 3), VIEW_ORDER.get(_view_name(o), 9), o.id))
     batches: list[StreetBatch] = []
     for start in range(0, len(usable), max_images):

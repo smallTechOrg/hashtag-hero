@@ -49,8 +49,10 @@ def _jpeg(img: Image.Image) -> bytes:
 class FakeGoogle:
     def __init__(self, ref: ReferenceLine, *, pano_spacing_m: float = 15.0, lateral_m: float = 3.0,
                  coverage: tuple[float, float] | None = None, placeholder_zooms: frozenset[int] = frozenset(),
-                 frame_status: int = 200, metadata_status_code: int = 200, require_key: str | None = "test-key"):
+                 frame_status: int = 200, metadata_status_code: int = 200, require_key: str | None = "test-key",
+                 second_pass_lateral_m: float | None = None):
         self.ref = ref
+        self.second_pass_lateral_m = second_pass_lateral_m   # a second capture pass (PASS2_*) at this lateral offset
         self.pano_spacing_m = pano_spacing_m
         self.lateral_m = lateral_m
         self.coverage = coverage  # (s_from, s_to) with panoramas; None = whole line
@@ -83,6 +85,9 @@ class FakeGoogle:
             if lo <= s <= hi:
                 lat, lon = self.ref.point_at(s, self.lateral_m)
                 out.append((f"PANO_{k:03d}", lat, lon, s))
+                if self.second_pass_lateral_m is not None:
+                    lat2, lon2 = self.ref.point_at(s, self.second_pass_lateral_m)
+                    out.append((f"PASS2_{k:03d}", lat2, lon2, s))
             k += 1
         return out
 

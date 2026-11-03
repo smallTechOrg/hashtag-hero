@@ -80,13 +80,14 @@ def _price(model: str | None) -> tuple[str, float, float]:
 
 
 def estimate_cost(new_sv: int, new_sat: int, model: str | None = None, *, fuse: bool = True, passes: int = 1,
-                  review_rounds: int = 0) -> CostEstimate:
+                  review_rounds: int = 0, claude_frames: int | None = None) -> CostEstimate:
     """Google: $0.007 per new Street View frame, $0.002 per new satellite crop. Claude (``fuse``): per new image
     1 500 input + 100 output tokens, per run 8 000 + 400, priced with ``price_for(model)``; no new image, no run cost.
 
     Max quality: every Street View frame is extracted ``passes`` times (each extra pass re-sends the frames and repeats
     the per-run prompt), and each of ``review_rounds`` review-and-fix rounds adds ``CLAUDE_*_PER_REVIEW`` tokens. The
-    figure is an upper bound: early stop skips rounds and stored answers are replayed for free."""
+    figure is an upper bound: early stop skips rounds and stored answers are replayed for free. ``claude_frames`` =
+    the new Street View frames Claude actually reads (default all): sphere tiles are bought but never sent."""
     if new_sv < 0 or new_sat < 0:
         raise ValueError("image counts cannot be negative")
     if passes < 1 or review_rounds < 0:
@@ -94,10 +95,11 @@ def estimate_cost(new_sv: int, new_sat: int, model: str | None = None, *, fuse: 
     name, p_in, p_out = _price(model)
     google = new_sv * SV_USD + new_sat * SAT_USD
     claude = 0.0
-    n_new = new_sv + new_sat
+    sv_seen = new_sv if claude_frames is None else max(0, min(new_sv, claude_frames))
+    n_new = sv_seen + new_sat
     if fuse and n_new:
-        sv_calls = new_sv * passes
-        runs = 1 + (passes - 1 if new_sv else 0)
+        sv_calls = sv_seen * passes
+        runs = 1 + (passes - 1 if sv_seen else 0)
         tok_in = (sv_calls + new_sat) * CLAUDE_IN_PER_IMAGE + runs * CLAUDE_IN_PER_RUN + review_rounds * CLAUDE_IN_PER_REVIEW
         tok_out = (sv_calls + new_sat) * CLAUDE_OUT_PER_IMAGE + runs * CLAUDE_OUT_PER_RUN + review_rounds * CLAUDE_OUT_PER_REVIEW
         claude = tok_in * p_in / 1e6 + tok_out * p_out / 1e6
@@ -356,7 +358,7 @@ def plan_improvements(*, fidelity: FidelityMap, gaps: GapReport | None, observat
         targeted_bins[b.index] = (b.level, need_level if b.level < need_level else b.level)
 
     plan = ImageryPlan(sv_spacing_m=10.0, headings=["forward", "back", "left", "right"], sat_crop_zoom=CROP_ZOOM,
-                       sat_crop_spacing_m=20.0, include_overview=True, max_images=max(1, min(2000, len(targets) + 1)),
+                       sat_crop_spacing_m=20.0, include_overview=True, max_images=max(1, min(5000, len(targets) + 1)),
                        targets=targets or None)
     images: list[PlannedImageView] = []
     for t in sorted(targets, key=lambda t: (t.station_s, t.kind, t.view or "")):

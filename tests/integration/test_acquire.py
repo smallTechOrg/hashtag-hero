@@ -257,3 +257,29 @@ def test_tilted_and_zoomed_frames_are_new_images_of_the_same_panoramas(seg_run, 
     assert not any("Nothing new" in w for w in more.warnings)
     req = [c for c in fake.calls_of("streetview")]
     assert {(c.get("pitch"), c.get("fov")) for c in req} >= {("-30", "50"), ("0", "90")}
+
+
+# ------------------------------------------------------------------ side look-ups and sphere tiles
+
+
+def test_side_lookups_find_the_second_pass_and_sphere_tiles_are_bought_but_marked(seg_run, tmp_path):
+    ref = straight_ref(60.0)
+    fake = FakeGoogle(ref, pano_spacing_m=20.0, lateral_m=3.0, second_pass_lateral_m=-4.0)
+    centre_only = plan(sv_spacing_m=10.0, headings=["forward"], max_images=500)
+    _, res1, _ = run_acquire(seg_run, tmp_path, fake, ref, centre_only)
+    seg, _ = seg_run
+    ids1 = {o.pano_id for o in model_repo.get_observations(seg.id)} - {None}
+    assert ids1 == {"PANO_000", "PANO_001", "PANO_002", "PANO_003"}        # the centreline finds the nearer pass only
+    both = plan(sv_spacing_m=10.0, headings=["forward"], max_images=500, sv_side_offsets_m=[-4.0, 0.0, 4.0],
+                sphere_fov_deg=30, sphere_heading_step_deg=90, sphere_pitches_deg=[0, -50])
+    _, res2, _ = run_acquire(seg_run, tmp_path, fake, ref, both)
+    obs = model_repo.get_observations(seg.id)
+    ids2 = {o.pano_id for o in obs} - {None}
+    assert ids2 == ids1 | {"PASS2_000", "PASS2_001", "PASS2_002", "PASS2_003"}   # the -4 m look-up finds the other pass
+    assert res2.new > res1.new
+    # sphere tiles: narrow, steep, never for Claude; the classic forward frame of each panorama is still there
+    tiles = [o for o in obs if o.is_sphere_tile]
+    assert tiles and all(o.fov_deg == 30 for o in tiles) and {o.pitch_deg for o in tiles} == {0.0, -50.0}
+    assert all(not o.is_sphere_tile for o in obs if o.fov_deg == 90 and o.pitch_deg == 0)
+    frames = [c for c in fake.calls if c["kind"] == "streetview_metadata"]
+    assert len(frames) >= 3 * 7                                              # three free look-ups per station

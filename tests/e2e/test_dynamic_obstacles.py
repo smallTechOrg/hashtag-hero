@@ -160,3 +160,26 @@ def test_every_static_hazard_without_glb_geometry_gets_a_visible_model(hpage):  
     }""")
     assert res["names"] == ["static_debris", "static_low_branch"], res
     assert res["ids"] == ["h-db", "h-lb"], res  # the pole is drawn by the glb itself
+
+
+def test_an_obstacle_the_layer_did_not_draw_never_hurts(hpage, gameplay):  # noqa: F811
+    _setup(hpage, seed=3, loop=0, ahead=0.0)
+    res = hpage.evaluate("""() => {
+      const { runner } = window.__t;
+      const walk = () => {
+        runner.reset(); runner.startRun();
+        const first = runner._obstaclesFor(0)[0];
+        runner.lane = first.lane; runner.laneFrom = first.lane; runner.elapsed = runner.invulnUntil + 1;
+        runner.x = first.x_m - 0.5;
+        let hit = null;
+        for (let i = 0; i < 400 && !hit; i++) for (const ev of runner.update(1 / 60)) if (ev.type === 'hit' && ev.object.dynamic) hit = ev;
+        return hit;
+      };
+      runner.isDrawn = () => false;          // the layer did not draw it (capacity, window, a bug): it must not hurt
+      const blind = walk();
+      const skips = runner.undrawnSkips;
+      runner.isDrawn = () => true;
+      const seen = walk();
+      return { blindHit: !!blind, skips, seenHit: !!seen };
+    }""")
+    assert res["blindHit"] is False and res["skips"] > 0 and res["seenHit"] is True

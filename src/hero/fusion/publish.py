@@ -243,8 +243,25 @@ def _bake(tc: Toolchain, model: CanonicalModel, observations: Mapping[str, Obser
     return refs
 
 
+def plan_walls(plan: Any) -> dict[str, list[tuple[float, float, float, float, float]]]:
+    """The frontage wall spans per physical side (``left`` / ``right`` of travel, left-positive ``t``) from a
+    StreetPlan: what ``mesh_frontage`` extrudes, so the panorama wall bake lands on the same planes."""
+    from hero.model.street_plan_types import t_of_lat
+
+    out: dict[str, list[tuple[float, float, float, float, float]]] = {"left": [], "right": []}
+    if plan is None or getattr(plan, "frontage", None) is None:
+        return out
+    fp_side = plan.footpath_side
+    for side in plan.frontage.sides:
+        phys = fp_side if side.side == "modelled" else ("right" if fp_side == "left" else "left")
+        for g in side.segments:
+            out[phys].append((float(g.s_from), float(g.s_to), float(t_of_lat(g.lat_from, fp_side)),
+                              float(t_of_lat(g.lat_to, fp_side)), float(g.height_m)))
+    return out
+
+
 def _build_panoramas(model: CanonicalModel, observations: Mapping[str, Observation], data_dir: Path,
-                     warnings: list[str]) -> None:
+                     warnings: list[str], plan: Any = None) -> None:
     """Stitch the Street View panoramas the play page walks through (never blocks the street)."""
     from hero.imagery.panorama import build_panoramas
     from hero.model.refline import ReferenceLine
@@ -253,7 +270,7 @@ def _build_panoramas(model: CanonicalModel, observations: Mapping[str, Observati
     try:
         ref = ReferenceLine.from_model(model.reference_line)
         manifest = build_panoramas(model.segment_slug, model.reference_line.length_s, list(observations.values()),
-                                   data_dir, ref)
+                                   data_dir, ref, walls=plan_walls(plan))
     except Exception as exc:  # noqa: BLE001 - the game falls back to the baked textures
         warnings.append(f"panoramas unavailable: the stitch failed ({str(exc)[:120]})")
         log.warning("panorama.build_failed", slug=model.segment_slug, error=repr(exc)[:200])
@@ -301,7 +318,7 @@ def derive_scene(model: CanonicalModel, *, observations: Mapping[str, Observatio
                             observations=observations, data_dir=data_dir)
             export_json = rec.to_json()
             scene = scene.model_copy(update={"assets": assets_for(model.segment_slug, rec)})
-            _build_panoramas(model, observations, data_dir, warnings)
+            _build_panoramas(model, observations, data_dir, warnings, plan=plan)
     gaps_json = gaps.model_dump(mode="json") if gaps is not None else None
     interpolated = union_m([(i.s_from, i.s_to) for i in gaps.interpolations]) if gaps is not None else 0.0
     dynamic = scene.dynamic_context.excluded_count if isinstance(scene, SceneV3) else 0

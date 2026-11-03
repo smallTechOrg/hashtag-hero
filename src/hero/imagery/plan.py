@@ -23,11 +23,17 @@ HEADING_OFFSET_DEG: dict[str, float] = {"forward": 0.0, "forward_right": 45.0, "
                                         "back": 180.0, "back_left": 225.0, "left": 270.0, "forward_left": 315.0}
 SPACING_RANGE = (4.0, 40.0)
 ZOOM_RANGE = (18, 21)
-MAX_IMAGES_RANGE = (1, 2000)
-PITCH_RANGE = (-45, 45)      # camera tilt: negative looks down (road surface, kerbs, potholes), positive up (facades)
+MAX_IMAGES_RANGE = (1, 5000)
+PITCH_RANGE = (-60, 60)      # camera tilt: negative looks down (road surface, kerbs, potholes), positive up (facades)
 FOV_RANGE = (20, 120)        # narrower = zoomed in: more detail per pixel from the same panorama
 DEFAULT_PITCH = 0
 DEFAULT_FOV = 90
+# Sphere tiles (the photo-real street): a panorama is re-shot as a grid of narrow frames, every ``heading_step`` degrees
+# at every tilt, so the stitched sphere has the detail Street View itself shows (fov 30 at 640 px = 21 px per degree).
+SPHERE_FOV_RANGE = (20, 60)
+SPHERE_STEP_RANGE = (10, 90)
+SPHERE_PITCHES_RANGE = (-75, 75)
+SIDE_OFFSET_RANGE = (-8.0, 8.0)   # extra free metadata look-ups beside the centreline find the other pass
 EST_COST_SV_USD = 0.007
 EST_COST_SAT_USD = 0.002
 OVERVIEW_SCALE = 2
@@ -90,23 +96,53 @@ class ImageryPlan(BaseModel):
     # Every Street View station is shot at each heading x pitch x fov (one panorama gives many distinct frames).
     pitches_deg: list[int] = Field(default_factory=lambda: [DEFAULT_PITCH], min_length=1)
     fovs_deg: list[int] = Field(default_factory=lambda: [DEFAULT_FOV], min_length=1)
+    # Sphere tiles on top of the classic frames: ``sphere_fov_deg`` set = every station is also shot every
+    # ``sphere_heading_step_deg`` (relative to travel) at every ``sphere_pitches_deg`` tilt with that narrow fov.
+    sphere_fov_deg: int | None = Field(default=None, ge=SPHERE_FOV_RANGE[0], le=SPHERE_FOV_RANGE[1])
+    sphere_heading_step_deg: int = Field(default=20, ge=SPHERE_STEP_RANGE[0], le=SPHERE_STEP_RANGE[1])
+    sphere_pitches_deg: list[int] = Field(default_factory=lambda: [0, -25, -50, 25, 50], min_length=1)
+    # Lateral offsets (m, left-positive) of the free Street View metadata look-ups per station: Google often has a
+    # second pass on the other side of the road a few metres away; [0] = the centreline only.
+    sv_side_offsets_m: list[float] = Field(default_factory=lambda: [0.0], min_length=1)
 
     @model_validator(mode="after")
     def _dedupe_headings(self) -> "ImageryPlan":
         self.headings = list(dict.fromkeys(self.headings))
         self.pitches_deg = list(dict.fromkeys(self.pitches_deg))
         self.fovs_deg = list(dict.fromkeys(self.fovs_deg))
+        self.sphere_pitches_deg = list(dict.fromkeys(self.sphere_pitches_deg))
+        self.sv_side_offsets_m = list(dict.fromkeys(float(o) for o in self.sv_side_offsets_m))
         for p in self.pitches_deg:
             if not PITCH_RANGE[0] <= p <= PITCH_RANGE[1]:
                 raise ValueError(f"pitches_deg: {p} is outside {PITCH_RANGE[0]}..{PITCH_RANGE[1]}")
         for f in self.fovs_deg:
             if not FOV_RANGE[0] <= f <= FOV_RANGE[1]:
                 raise ValueError(f"fovs_deg: {f} is outside {FOV_RANGE[0]}..{FOV_RANGE[1]}")
+        for p in self.sphere_pitches_deg:
+            if not SPHERE_PITCHES_RANGE[0] <= p <= SPHERE_PITCHES_RANGE[1]:
+                raise ValueError(f"sphere_pitches_deg: {p} is outside {SPHERE_PITCHES_RANGE[0]}..{SPHERE_PITCHES_RANGE[1]}")
+        for o in self.sv_side_offsets_m:
+            if not SIDE_OFFSET_RANGE[0] <= o <= SIDE_OFFSET_RANGE[1]:
+                raise ValueError(f"sv_side_offsets_m: {o:g} is outside {SIDE_OFFSET_RANGE[0]:g}..{SIDE_OFFSET_RANGE[1]:g}")
+        if 360 % self.sphere_heading_step_deg:
+            raise ValueError(f"sphere_heading_step_deg: {self.sphere_heading_step_deg} must divide 360")
         return self
 
     @property
+    def sphere_frames(self) -> int:
+        """Sphere tiles per panorama (0 when ``sphere_fov_deg`` is unset)."""
+        if self.sphere_fov_deg is None:
+            return 0
+        return (360 // self.sphere_heading_step_deg) * len(self.sphere_pitches_deg)
+
+    @property
     def frames_per_station(self) -> int:
-        return len(self.headings) * len(self.pitches_deg) * len(self.fovs_deg)
+        """Frames per look-up point: classic headings x pitches x fovs plus the sphere tiles."""
+        return len(self.headings) * len(self.pitches_deg) * len(self.fovs_deg) + self.sphere_frames
+
+    @property
+    def lookups_per_station(self) -> int:
+        return len(self.sv_side_offsets_m)   # free metadata calls per station (acquire)
 
 
 def default_plan(settings: Settings) -> ImageryPlan:
@@ -121,7 +157,8 @@ def default_plan(settings: Settings) -> ImageryPlan:
 def merge_plan(base: ImageryPlan, overrides: dict[str, Any]) -> ImageryPlan:
     """``base`` with the non-``None`` ``overrides`` applied and re-validated. Raises ``ValueError`` (message
     names the offending field) for unknown keys or out-of-range values (spacing 4-40, >= 1 heading, zoom 18-21,
-    max_images 1-2000, pitch -45..45, fov 20..120)."""
+    max_images 1-5000, pitch -60..60, fov 20..120, sphere fov 20..60 / step dividing 360 / tilts -75..75,
+    side offsets -8..8 m)."""
     allowed = set(ImageryPlan.model_fields)
     unknown = sorted(set(overrides) - allowed)
     if unknown:
@@ -153,6 +190,12 @@ class PlannedImage:
     zoom: int | None
     pitch_deg: int = DEFAULT_PITCH
     fov_deg: int = DEFAULT_FOV
+    sphere: bool = False       # a sphere tile (narrow grid frame) rather than a classic named-heading frame
+
+
+def view_name(offset_deg: float) -> str:
+    """The named heading nearest to a relative heading (sphere tiles get the name of their sector)."""
+    return min(HEADING_OFFSET_DEG, key=lambda n: abs((offset_deg - HEADING_OFFSET_DEG[n] + 180.0) % 360.0 - 180.0))
 
 
 @dataclass(frozen=True)
@@ -235,7 +278,7 @@ def plan_images(ref: ReferenceLine, plan: ImageryPlan) -> tuple[list[PlannedImag
         if not hi > lo:
             raise ValueError(f"s_range [{plan.s_range.s_from}, {plan.s_range.s_to}] lies outside the line (0..{total:.1f} m)")
     span = hi - lo
-    n_head = plan.frames_per_station  # frames per station (headings x pitches x fovs)
+    n_head = plan.frames_per_station  # frames per station (side look-ups only ADD panoramas, see acquire)
     notes: list[str] = []
 
     n_overview = 1 if plan.include_overview else 0
@@ -275,13 +318,22 @@ def plan_images(ref: ReferenceLine, plan: ImageryPlan) -> tuple[list[PlannedImag
 
     items: list[PlannedImage] = []
     for s in stations:
-        lat, lon = ref.point_at(s, 0.0)
         bearing = ref.bearing_deg(s)
+        lat, lon = ref.point_at(s, 0.0)
         for fov in plan.fovs_deg:
             for pitch in plan.pitches_deg:
                 for name in plan.headings:
                     items.append(PlannedImage("streetview", name, s, lat, lon,
                                               (bearing + HEADING_OFFSET_DEG[name]) % 360.0, None, pitch, fov))
+        if plan.sphere_fov_deg is not None:
+            for pitch in plan.sphere_pitches_deg:
+                for rel in range(0, 360, plan.sphere_heading_step_deg):
+                    items.append(PlannedImage("streetview", view_name(rel), s, lat, lon, (bearing + rel) % 360.0, None,
+                                              pitch, plan.sphere_fov_deg, sphere=True))
+    extra_lookups = len(plan.sv_side_offsets_m) - 1
+    if extra_lookups and stations:
+        notes.append(f"side look-ups ({', '.join(f'{o:+g} m' for o in plan.sv_side_offsets_m if o)}) may find up to "
+                     f"{extra_lookups} more panorama(s) per station, each adding up to {n_head} frames (within max_images)")
     # Hard clamp: with a tiny max_images even one station x all headings may not fit; never plan more than the cap.
     sv_allowed = max(0, plan.max_images - n_crops - n_extra - n_overview)
     if len(items) > sv_allowed:

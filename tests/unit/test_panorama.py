@@ -182,3 +182,44 @@ def test_build_stores_the_frozen_ground_next_to_the_spheres(tmp_path: Path):
     assert g["width"] == 560 and g["height"] == 2000
     assert pm.load_panoramas("g", tmp_path) == manifest
     assert pm.build_panoramas("none", 100.0, [], tmp_path, ref)["ground"] is None
+
+
+# ------------------------------------------------------------------ the frozen walls and the master sphere
+
+
+def test_sphere_width_follows_the_sharpest_frame():
+    wide = (Image.new("RGB", (640, 640)), 0.0, 0.0, 90.0)
+    tile = (Image.new("RGB", (640, 640)), 0.0, 0.0, 30.0)
+    assert pm.sphere_width([wide]) == 2048 and pm.sphere_width([wide, tile]) == 8192
+    assert pm.sphere_width([(Image.new("RGB", (640, 640)), 0.0, 0.0, 50.0)]) == 4096
+
+
+def test_frontage_is_painted_per_side_in_the_facade_uv_frame():
+    ref = _ref()
+    near = _sphere(RED, GREEN, ground=(40, 40, 40))         # left half-sphere (west) RED above the horizon
+    img = pm.bake_frontage([(50.0, 0.0, near, -90.0)], 100.0, ref,
+                           {"left": [(0.0, 100.0, 8.0, 8.0, 10.0)], "right": [(0.0, 100.0, -8.0, -8.0, 10.0)]})
+    assert img.size == (pm.FRONTAGE_W, 2 * pm.FRONTAGE_H_SIDE)
+    # left wall (top ribbon) is north of the eastbound line: 5 m ahead of the camera it sits at bearing ~32
+    # (the eastern half of the sphere = GREEN); the right wall (bottom ribbon) 5 m behind is at bearing ~212 (RED).
+    # Both are above the horizon at 6 m up.
+    col = lambda s_m: int(s_m / 100.0 * pm.FRONTAGE_W)  # noqa: E731
+    top = img.getpixel((col(55.0), pm.FRONTAGE_H_SIDE // 2))
+    bottom = img.getpixel((col(45.0), pm.FRONTAGE_H_SIDE + pm.FRONTAGE_H_SIDE // 2))
+    assert _close(top, GREEN, 30)
+    assert _close(bottom, RED, 30)
+    # the wall foot (h ~ 0) at 8 m out is below the camera: ground colour
+    foot = img.getpixel((pm.FRONTAGE_W // 2, pm.FRONTAGE_H_SIDE - 3))
+    assert sum(foot) < 200
+
+
+def test_build_bakes_the_frontage_when_wall_spans_are_given(tmp_path: Path):
+    ref = _ref()
+    obs = [_obs(tmp_path, "A", h, station_s=50.0, pitch=25.0) for h in (0, 90, 180, 270)]
+    walls = {"left": [(0.0, 100.0, 9.0, 9.0, 12.0)], "right": []}
+    manifest = pm.build_panoramas("w", 100.0, obs, tmp_path, ref, width=128, walls=walls)
+    f = manifest["frontage"]
+    assert f["url"].startswith("/media/panoramas/w/frontage_") and f["layout"] == "stacked_L_over_R" and f["top_m"] == 12.0
+    assert (tmp_path / "panoramas" / "w" / Path(f["url"]).name).is_file()
+    assert pm.load_panoramas("w", tmp_path) == manifest
+    assert pm.build_panoramas("w2", 100.0, obs, tmp_path, ref, width=128)["frontage"] is None

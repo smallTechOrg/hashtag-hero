@@ -194,8 +194,13 @@ def plan_from_core(c: _Core, *, fidelity: FidelityMap, gaps: GapReport, textures
     # them on a lane would be an invisible hit, so they never collide
     objects = [o.model_copy(update={"tile_px": None}) if c.tile is None else o for o in c.objects
                if not o.scenery and o.type not in FRONTAGE_TYPES]
+    def carriageway_at(s: float) -> tuple[float, float] | None:
+        st = min(c.stations, key=lambda x: abs(x.s - s))
+        road = [sp for sp in st.strips if sp.kind == "carriageway"]
+        return (min(sp.lo for sp in road), max(sp.hi for sp in road)) if road else None
+
     fur = furniture.plan_furniture(model, sign=c.sign, dynamic_ids=dyn_ids, objects=c.objects, fidelity=fidelity,
-                                   tints=textures.tints if textures else None)
+                                   tints=textures.tints if textures else None, carriageway=carriageway_at)
     _, dyn_ctx = dynamic.dynamic_context(c.dynamic, length, gameplay)
     fid = PlanFidelity(overall_level=fidelity.overall.level, score=fidelity.overall.score,
                        bins=[FidelityBin(index=b.index, s_from=b.s_from, s_to=b.s_to, level=b.level) for b in fidelity.bins])

@@ -348,7 +348,11 @@ class ImageryBody(BaseModel):
     headings: list[str] | None = Field(default=None, min_length=1)
     sat_crop_zoom: int | None = Field(default=None, ge=18, le=21)
     sat_crop_spacing_m: float | None = Field(default=None, gt=0)
-    max_images: int | None = Field(default=None, ge=1, le=2000)
+    max_images: int | None = Field(default=None, ge=1, le=5000)
+    sphere_fov_deg: int | None = Field(default=None, ge=20, le=60)
+    sphere_heading_step_deg: int | None = Field(default=None, ge=10, le=90)
+    sphere_pitches_deg: list[int] | None = Field(default=None, min_length=1, max_length=9)
+    sv_side_offsets_m: list[float] | None = Field(default=None, min_length=1, max_length=5)
     s_range: SRange | None = None
     sat_extra_zoom: int | None = Field(default=None, ge=18, le=21)
     pitches_deg: list[int] | None = Field(default=None, min_length=1, max_length=5)
@@ -522,7 +526,7 @@ def estimate_imagery(slug: str, raw: dict[str, Any] = Body(default_factory=dict)
     except ValueError as exc:
         raise ApiError("validation_error", str(exc)) from None
     stored = model_repo.get_observations(seg.id, limit=100_000)
-    new_sv = new_sat = deduped = 0
+    new_sv = new_sat = deduped = claude_frames = 0
     sv_key = _streetview_keys(stored)
     seen: set[tuple] = set()
     for it in items:
@@ -533,6 +537,7 @@ def estimate_imagery(slug: str, raw: dict[str, Any] = Body(default_factory=dict)
                 continue
             seen.add(key)
             new_sv += 0 if stored_already else 1
+            claude_frames += 0 if stored_already or it.sphere else 1
         elif it.kind == "satellite_crop":
             t = PlanTarget(kind="satellite_crop", station_s=it.station_s, zoom=it.zoom)
             new_sat += 0 if improve._stored_match(stored, t) else 1
@@ -540,7 +545,7 @@ def estimate_imagery(slug: str, raw: dict[str, Any] = Body(default_factory=dict)
             new_sat += 0 if any(o.kind is ObservationKind.satellite_overview for o in stored) else 1
     rounds = quality.rounds(settings.max_review_iterations)
     est = improve.estimate_cost(new_sv, new_sat, model, fuse=body.fuse, passes=quality.extraction_passes,
-                                review_rounds=rounds)
+                                review_rounds=rounds, claude_frames=claude_frames)
     planned = info.paid_total - deduped
     return ok({"counts": dict(info.counts), "planned": planned, "new": new_sv + new_sat, "cached": planned - new_sv - new_sat,
                "new_streetview": new_sv, "new_satellite": new_sat, "trimmed": info.trimmed, "notes": list(info.notes),

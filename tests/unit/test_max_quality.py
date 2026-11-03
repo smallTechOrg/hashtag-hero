@@ -98,12 +98,13 @@ def test_provenance_records_model_prompt_version_pass_cost_and_shas():
 def test_preset_values_match_the_brief():
     p = MQ.preset_payload()["preset"]
     assert p["model"] == "claude-opus-5-5" and p["sv_spacing_m"] <= 6 and len(p["headings"]) == 8
-    assert p["frames_per_station"] == 8 * len(p["pitches_deg"]) * len(p["fovs_deg"]) == 48 and min(p["pitches_deg"]) < 0 < max(p["pitches_deg"])
+    assert p["sphere_fov_deg"] == 30 and p["sphere_heading_step_deg"] == 20 and len(p["sphere_pitches_deg"]) == 5
+    assert p["sphere_frames"] == 18 * 5 == 90 and p["frames_per_station"] == 8 + 90 == 98
+    assert p["sv_side_offsets_m"] == [-4.0, 0.0, 4.0]
     assert p["sat_crop_zoom"] == 21 and p["sat_extra_zoom"] in (19, 20) and p["extraction_passes"] == 3 and p["review_rounds"] == 4
     # the plan fields are valid for the imagery plan (the form posts them as-is)
-    plan = merge_plan(default_plan(get_settings()), {k: p[k] for k in ("sv_spacing_m", "headings", "sat_crop_zoom", "sat_extra_zoom",
-                                                                     "sat_crop_spacing_m", "max_images", "pitches_deg", "fovs_deg")})
-    assert plan.sat_extra_zoom == 20 and plan.max_images == 2000 and plan.frames_per_station == 48
+    plan = merge_plan(default_plan(get_settings()), {k: p[k] for k in MQ.PLAN_KEYS})
+    assert plan.sat_extra_zoom == 20 and plan.max_images == 5000 and plan.frames_per_station == 98
 
 
 def test_quality_resolve_fills_preset_defaults_and_validates():

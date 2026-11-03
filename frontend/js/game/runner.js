@@ -56,6 +56,8 @@ export class Runner {
     this.track = pd.track;
     this.lanes = pd.lanes || [];
     this.hazards = (pd.colliders || []).filter((o) => o.action !== 'none').map((o) => (o.x_m === undefined ? { ...o, x_m: o.s } : o));
+    this.isDrawn = null;       // (id, type) => bool, set by the page from the obstacle layer: an undrawn obstacle never hurts
+    this.undrawnSkips = 0;     // QA counter: hits that were skipped because the obstacle was not on screen
     this.tokenDefs = (pd.tokens || []).map((t) => (t.x_m === undefined ? { ...t, x_m: t.s } : t));
     this.spawnInput = { ...(pd.spawnInput || {}), slug: this.slug, length_m: this.lengthM };
     this.seedOpt = seed;
@@ -220,6 +222,7 @@ export class Runner {
       if (!this._overlaps(obj, xw) && (obj.dynamic || !this._overlaps(obj, xw + this.lengthM))) continue;
       if (obj.action === 'jump' && this.airborne) continue;
       if (obj.action === 'slide' && this.sliding) continue;
+      if (this.isDrawn && !this.isDrawn(obj.id, obj.type)) { this.undrawnSkips += 1; continue; }   // never an invisible hit
       const key = `${obj.id}:${this.loops}`;
       if (this.invulnerable || this.hitKeys.has(key)) continue;
       this.hitKeys.add(key);

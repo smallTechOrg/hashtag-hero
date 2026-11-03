@@ -144,7 +144,7 @@ def test_merge_plan_applies_overrides_and_ignores_none():
     ({"sv_spacing_m": 3.9}, "sv_spacing_m"), ({"sv_spacing_m": 40.1}, "sv_spacing_m"),
     ({"headings": []}, "headings"), ({"headings": ["up"]}, "headings"),
     ({"sat_crop_zoom": 17}, "sat_crop_zoom"), ({"sat_crop_zoom": 22}, "sat_crop_zoom"),
-    ({"max_images": 0}, "max_images"), ({"max_images": 2001}, "max_images"),
+    ({"max_images": 0}, "max_images"), ({"max_images": 5001}, "max_images"),
     ({"bogus": 1}, "unknown"), ({"s_range": {"s_from": 10, "s_to": 5}}, "s_range"),
 ])
 def test_merge_plan_rejects_out_of_range_values(overrides, needle):
@@ -172,7 +172,7 @@ def test_tilts_fovs_and_diagonals_multiply_the_frames_of_every_station():
 def test_default_plan_is_level_and_wide_and_bad_tilts_or_fovs_are_rejected():
     items, _ = plan_images(straight_reference_line(100.0), plan())
     assert {(i.pitch_deg, i.fov_deg) for i in items if i.kind == "streetview"} == {(0, 90)}
-    for bad, needle in (({"pitches_deg": [-60]}, "pitches_deg"), ({"fovs_deg": [150]}, "fovs_deg"),
+    for bad, needle in (({"pitches_deg": [-61]}, "pitches_deg"), ({"fovs_deg": [150]}, "fovs_deg"),
                         ({"pitches_deg": []}, "pitches_deg")):
         with pytest.raises(ValueError, match=needle):
             merge_plan(plan(), bad)

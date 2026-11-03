@@ -111,3 +111,13 @@ def test_low_branch_from_a_low_canopy_tree_is_an_object_not_furniture():
 def test_each_fixed_type_is_accepted_by_the_plan(t):
     p = plan_of([ent(1, EntityType(t))])
     assert [f.type for f in p.furniture] == [t]
+
+
+def test_furniture_standing_on_the_carriageway_is_dropped_as_a_perception_error():
+    from hero.model.furniture import on_carriageway
+
+    ents = [ent(1, EntityType.tree, s=20, t=0.0), ent(2, EntityType.pole, s=30, t=-2.5), ent(3, EntityType.tree, s=40, t=5.8),
+            ent(4, EntityType.bin, s=50, t=6.0), ent(5, EntityType.drain, s=60, t=0.0)]   # a drain may sit on the road
+    p = plan_of(ents)
+    assert [(f.type, f.s) for f in p.furniture] == [("tree", 40.0), ("bin", 50.0), ("drain", 60.0)]
+    assert on_carriageway(0.0, (-4.5, 4.0)) and not on_carriageway(3.8, (-4.5, 4.0)) and not on_carriageway(5.0, None)
