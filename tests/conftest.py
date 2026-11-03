@@ -53,6 +53,7 @@ DEV_PORT = 8711
 # (The per-process SQLite test DB keeps its own URL; only the file tree under HERO_DATA_DIR moves.)
 _SESSION_DATA_DIR = Path(tempfile.mkdtemp(prefix="hero-test-data-"))
 os.environ["HERO_DATA_DIR"] = str(_SESSION_DATA_DIR)
+os.environ.setdefault("HERO_PANORAMA_BAKE", "0")   # the photo-real bakes take minutes per street: unit-tested directly
 reset_settings()
 
 

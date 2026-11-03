@@ -263,9 +263,13 @@ def plan_walls(plan: Any) -> dict[str, list[tuple[float, float, float, float, fl
 def _build_panoramas(model: CanonicalModel, observations: Mapping[str, Observation], data_dir: Path,
                      warnings: list[str], plan: Any = None) -> None:
     """Stitch the Street View panoramas the play page walks through (never blocks the street)."""
+    from hero.config import get_settings
     from hero.imagery.panorama import build_panoramas
     from hero.model.refline import ReferenceLine
 
+    if not get_settings().panorama_bake:
+        warnings.append("panoramas not built: HERO_PANORAMA_BAKE is off")
+        return
     started = time.perf_counter()
     try:
         ref = ReferenceLine.from_model(model.reference_line)
