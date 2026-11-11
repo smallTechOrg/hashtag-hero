@@ -38,8 +38,8 @@ PROJECT=my-project REGION=asia-south1 BUCKET=MY-HERO-DATA SQL_INSTANCE=my-projec
 or push to the deploy branch with the GitHub workflow (`.github/workflows/deploy-cloudrun.yml`; repository secrets
 `GCP_PROJECT`, `GCP_REGION`, `GCP_BUCKET`, `GCP_SQL_INSTANCE` and the auth secrets it names).
 
-The service runs one always-on instance (`--min-instances 1 --max-instances 1 --no-cpu-throttling`): the fusion
-runs are in-process background tasks and must not be interrupted; the request timeout is one hour for the long
+The service runs one warm instance (`--min-instances 1 --max-instances 1`) on request-based billing (`--cpu-throttling`, no startup CPU boost via `--no-cpu-boost`), so CPU is only allocated while a request is being served; the fusion
+runs are in-process background tasks, so keep an admin request open for their duration (or move them to a job); the request timeout is one hour for the long
 admin calls. The game itself is static files plus small JSON, served by the same container.
 
 ## Moving your local data up
