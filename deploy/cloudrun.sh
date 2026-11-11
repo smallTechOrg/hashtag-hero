@@ -15,7 +15,7 @@ gcloud --project "$PROJECT" builds submit --tag "$IMAGE" .
 
 gcloud --project "$PROJECT" run deploy "$SERVICE" --region "$REGION" --image "$IMAGE" \
   --allow-unauthenticated --execution-environment gen2 --cpu 2 --memory 4Gi --timeout 3600 \
-  --min-instances 1 --max-instances 1 --cpu-throttling --no-cpu-boost --concurrency 40 \
+  --min-instances 0 --max-instances 1 --cpu-throttling --no-cpu-boost --concurrency 40 \
   --add-cloudsql-instances "$SQL_INSTANCE" \
   --add-volume "name=data,type=cloud-storage,bucket=${BUCKET}" --add-volume-mount "volume=data,mount-path=/data" \
   --set-env-vars "HERO_DATA_DIR=/data,HERO_CLAUDE_BUDGET_USD=${HERO_CLAUDE_BUDGET_USD:-50},HERO_LOG_LEVEL=INFO" \
