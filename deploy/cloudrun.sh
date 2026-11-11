@@ -5,9 +5,7 @@
 #   HERO_ANTHROPIC_API_KEY=... HERO_ANTHROPIC_WORKSPACE_ID=... HERO_GOOGLE_MAPS_API_KEY=... \
 #   HERO_ADMIN_PASSWORD=... HERO_DATABASE_URL=... ./deploy/cloudrun.sh
 # The app's secrets come from the environment (GitHub repository secrets in CI) and are passed to the service as
-# environment variables; nothing is read from Secret Manager. --clear-secrets drops the old Secret Manager references
-# (gcloud refuses to replace a secret-typed variable with a plain one).
-# The database URL looks like  postgresql+psycopg://hero:PASSWORD@PRIVATE_IP:5432/hero
+# environment variables; nothing is read from Secret Manager.# The database URL looks like  postgresql+psycopg://hero:PASSWORD@PRIVATE_IP:5432/hero
 set -euo pipefail
 : "${PROJECT:?set PROJECT}" "${REGION:=us-central1}" "${BUCKET:?set BUCKET (GCS bucket for /data)}"
 : "${HERO_ANTHROPIC_API_KEY:?}" "${HERO_ANTHROPIC_WORKSPACE_ID:?}" "${HERO_GOOGLE_MAPS_API_KEY:?}" "${HERO_ADMIN_PASSWORD:?}" "${HERO_DATABASE_URL:?}"
@@ -30,10 +28,14 @@ env.update(HERO_DATA_DIR="/data", HERO_CLAUDE_BUDGET_USD=os.environ.get("HERO_CL
 open(sys.argv[1], "w").write("\n".join(f"{k}: {json.dumps(v)}" for k, v in env.items()) + "\n")
 PY
 
+# gcloud refuses to replace a secret-typed variable with a plain one, so first drop any old Secret Manager references
+# (no traffic moves; the revision this creates may not start without its variables, which is fine: the deploy below
+# creates the real one and takes the traffic).
+gcloud --project "$PROJECT" run services update "$SERVICE" --region "$REGION" --no-traffic --clear-secrets --quiet || true
+
 gcloud --project "$PROJECT" run deploy "$SERVICE" --region "$REGION" --image "$IMAGE" \
   --allow-unauthenticated --execution-environment gen2 --cpu 2 --memory 4Gi --timeout 3600 \
   --min-instances 0 --max-instances 1 --cpu-throttling --no-cpu-boost --concurrency 40 \
-  --clear-secrets \
   --network default --subnet default --vpc-egress private-ranges-only \
   --add-volume "name=data,type=cloud-storage,bucket=${BUCKET}" --add-volume-mount "volume=data,mount-path=/data" \
   --env-vars-file "$ENV_FILE"
