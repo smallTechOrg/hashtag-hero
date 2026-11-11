@@ -17,29 +17,18 @@ gcloud sql databases create hero --instance=hero
 gcloud sql users create hero --instance=hero --password='CHOOSE-A-PASSWORD'
 ```
 
-Secrets (the app reads them as env vars; Cloud Run injects them from Secret Manager):
+## CI/CD
 
-```bash
-printf %s "$ANTHROPIC_KEY"  | gcloud secrets create hero-anthropic-key --data-file=-
-printf %s "$MAPS_KEY"       | gcloud secrets create hero-google-maps-key --data-file=-
-printf %s "$ADMIN_PASSWORD" | gcloud secrets create hero-admin-password --data-file=-
-printf %s 'postgresql+psycopg://hero:CHOOSE-A-PASSWORD@/hero?host=/cloudsql/PROJECT:asia-south1:hero' | gcloud secrets create hero-database-url --data-file=-
-```
+`.github/workflows/deploy-cloudrun.yml` builds the image, pushes it to Artifact Registry and deploys to Cloud Run
+(project `ai-agent-boilerplate0`, `us-central1`) on every push to `main` or the v0.1 feature branch, or by hand from
+the Actions tab. Auth is keyless (Workload Identity Federation, provider `hero-github`, service account
+`github-actions-deployer`). The app's secrets live only in GitHub repository secrets and are passed to the service as
+environment variables: `HERO_ANTHROPIC_API_KEY`, `HERO_ANTHROPIC_WORKSPACE_ID`, `HERO_GOOGLE_MAPS_API_KEY`,
+`HERO_ADMIN_PASSWORD`, `HERO_DATABASE_URL`. To deploy from a shell instead, export those and run
+`PROJECT=... REGION=us-central1 BUCKET=... ./deploy/cloudrun.sh`.
 
-Grant the Cloud Run service account `roles/secretmanager.secretAccessor`, `roles/cloudsql.client` and
-`roles/storage.objectAdmin` on the bucket.
-
-## Deploy
-
-```bash
-PROJECT=my-project REGION=asia-south1 BUCKET=MY-HERO-DATA SQL_INSTANCE=my-project:asia-south1:hero ./deploy/cloudrun.sh
-```
-
-or push to the deploy branch with the GitHub workflow (`.github/workflows/deploy-cloudrun.yml`; repository secrets
-`GCP_PROJECT`, `GCP_REGION`, `GCP_BUCKET`, `GCP_SQL_INSTANCE` and the auth secrets it names).
-
-The service runs one always-on instance (`--min-instances 1 --max-instances 1 --no-cpu-throttling`): the fusion
-runs are in-process background tasks and must not be interrupted; the request timeout is one hour for the long
+The service runs single instance that scales to zero (`--min-instances 0 --max-instances 1`) on request-based billing (`--cpu-throttling`, no startup CPU boost via `--no-cpu-boost`), so CPU is only allocated while a request is being served; the fusion
+runs are in-process background tasks, so keep an admin request open for their duration (or move them to a job); the request timeout is one hour for the long
 admin calls. The game itself is static files plus small JSON, served by the same container.
 
 ## Moving your local data up

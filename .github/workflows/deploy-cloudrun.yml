@@ -1,7 +1,7 @@
-# Deploys #hero to Cloud Run on every push to the deploy branch (and by hand with "Run workflow").
-# Repository secrets: GCP_PROJECT, GCP_REGION, GCP_BUCKET, GCP_SQL_INSTANCE and either GCP_WORKLOAD_IDENTITY_PROVIDER +
-# GCP_SERVICE_ACCOUNT (keyless, preferred) or GCP_SA_KEY (a service-account JSON key). The app's own secrets live in
-# Secret Manager (see deploy/cloudrun.sh), never in GitHub.
+# Deploys #hero to Cloud Run on every push to main or the v0.1 feature branch (and by hand: Actions -> deploy-cloud-run -> "Run workflow").
+# Auth is keyless (Workload Identity Federation, provider `hero-github` in pool `github`, restricted to this repo).
+# The app's secrets live only in GitHub repository secrets: HERO_ANTHROPIC_API_KEY, HERO_ANTHROPIC_WORKSPACE_ID,
+# HERO_GOOGLE_MAPS_API_KEY, HERO_ADMIN_PASSWORD, HERO_DATABASE_URL.
 name: deploy-cloud-run
 on:
   push:
@@ -9,22 +9,34 @@ on:
     paths-ignore: ["docs/**", "spec/**", "*.md"]
   workflow_dispatch: {}
 concurrency: { group: cloud-run, cancel-in-progress: false }
+permissions: { contents: read, id-token: write }
+env:
+  WORKLOAD_IDENTITY_PROVIDER: projects/870371939888/locations/global/workloadIdentityPools/github/providers/hero-github
+  DEPLOY_SERVICE_ACCOUNT: github-actions-deployer@ai-agent-boilerplate0.iam.gserviceaccount.com
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions: { contents: read, id-token: write }
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v2
       - name: Build and deploy
         env:
-          PROJECT: ${{ secrets.GCP_PROJECT }}
-          REGION: ${{ secrets.GCP_REGION }}
-          BUCKET: ${{ secrets.GCP_BUCKET }}
-          SQL_INSTANCE: ${{ secrets.GCP_SQL_INSTANCE }}
+          PROJECT: ai-agent-boilerplate0
+          REGION: us-central1
+          BUCKET: hero-data-ai-agent-boilerplate0
+          HERO_ANTHROPIC_API_KEY: ${{ secrets.HERO_ANTHROPIC_API_KEY }}
+          HERO_ANTHROPIC_WORKSPACE_ID: ${{ secrets.HERO_ANTHROPIC_WORKSPACE_ID }}
+          HERO_GOOGLE_MAPS_API_KEY: ${{ secrets.HERO_GOOGLE_MAPS_API_KEY }}
+          HERO_ADMIN_PASSWORD: ${{ secrets.HERO_ADMIN_PASSWORD }}
+          HERO_DATABASE_URL: ${{ secrets.HERO_DATABASE_URL }}
         run: ./deploy/cloudrun.sh
+      - name: Health check
+        run: |
+          URL=$(gcloud run services describe hero --region us-central1 --format 'value(status.url)')
+          for i in 1 2 3 4 5 6; do curl -fsS -m 60 -o /dev/null "$URL/api/health" && echo healthy && exit 0; sleep 10; done
+          echo "health check failed"; exit 1
