@@ -5,7 +5,8 @@
 #   HERO_ANTHROPIC_API_KEY=... HERO_ANTHROPIC_WORKSPACE_ID=... HERO_GOOGLE_MAPS_API_KEY=... \
 #   HERO_ADMIN_PASSWORD=... HERO_DATABASE_URL=... ./deploy/cloudrun.sh
 # The app's secrets come from the environment (GitHub repository secrets in CI) and are passed to the service as
-# environment variables; nothing is read from Secret Manager.# The database URL looks like  postgresql+psycopg://hero:PASSWORD@PRIVATE_IP:5432/hero
+# environment variables; nothing is read from Secret Manager.
+# The database URL looks like  postgresql+psycopg://hero:PASSWORD@PRIVATE_IP:5432/hero
 set -euo pipefail
 : "${PROJECT:?set PROJECT}" "${REGION:=us-central1}" "${BUCKET:?set BUCKET (GCS bucket for /data)}"
 : "${HERO_ANTHROPIC_API_KEY:?}" "${HERO_ANTHROPIC_WORKSPACE_ID:?}" "${HERO_GOOGLE_MAPS_API_KEY:?}" "${HERO_ADMIN_PASSWORD:?}" "${HERO_DATABASE_URL:?}"
@@ -39,5 +40,8 @@ gcloud --project "$PROJECT" run deploy "$SERVICE" --region "$REGION" --image "$I
   --network default --subnet default --vpc-egress private-ranges-only \
   --add-volume "name=data,type=cloud-storage,bucket=${BUCKET}" --add-volume-mount "volume=data,mount-path=/data" \
   --env-vars-file "$ENV_FILE"
+
+# The --no-traffic step above pins traffic to the old revision; send it to the latest one.
+gcloud --project "$PROJECT" run services update-traffic "$SERVICE" --region "$REGION" --to-latest
 
 gcloud --project "$PROJECT" run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)'
