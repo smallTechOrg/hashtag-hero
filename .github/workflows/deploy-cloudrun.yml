@@ -1,4 +1,5 @@
-# Deploys #hero to Cloud Run on every push to main or the v0.1 feature branch (and by hand: Actions -> deploy-cloud-run -> "Run workflow").
+# Deploys #hero to Cloud Run automatically on every push to main or the v0.1 feature branch, after the tests pass.
+# Deployments go only through this workflow (push, or by hand: Actions -> deploy-cloud-run -> "Run workflow"); never deploy to GCP directly from a workstation.
 # Auth is keyless (Workload Identity Federation, provider `hero-github` in pool `github`, restricted to this repo).
 # The app's secrets live only in GitHub repository secrets: HERO_ANTHROPIC_API_KEY, HERO_ANTHROPIC_WORKSPACE_ID,
 # HERO_GOOGLE_MAPS_API_KEY, HERO_ADMIN_PASSWORD, HERO_DATABASE_URL.
@@ -14,7 +15,27 @@ env:
   WORKLOAD_IDENTITY_PROVIDER: projects/870371939888/locations/global/workloadIdentityPools/github/providers/hero-github
   DEPLOY_SERVICE_ACCOUNT: github-actions-deployer@ai-agent-boilerplate0.iam.gserviceaccount.com
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    env:
+      # Throwaway values: config requires them to be present; no test spends money (live tests are skipped).
+      HERO_ADMIN_PASSWORD: ci-admin-password
+      HERO_ANTHROPIC_API_KEY: ci-dummy
+      HERO_ANTHROPIC_WORKSPACE_ID: ci-dummy
+      HERO_GOOGLE_MAPS_API_KEY: ci-dummy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12.5"  # must match .python-version: exports embed the exact Python version
+      - run: uv sync --frozen
+      - name: Unit + integration tests
+        run: uv run pytest tests/unit tests/integration -q
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
