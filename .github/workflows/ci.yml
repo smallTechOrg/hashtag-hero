@@ -1,0 +1,33 @@
+name: CI
+
+# Runs on every PR and on pushes to the integration branches.
+# Unit + integration tests use a per-process SQLite DB (tests/conftest.py); live tests (real keys, spend) are skipped.
+
+on:
+  pull_request:
+  push:
+    branches: [main, feature/hero-20261029-1915-v0.1]
+    paths-ignore: ["docs/**", "spec/**", "*.md"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      # Throwaway values: config requires them to be present; no test spends money (live tests are skipped).
+      HERO_ADMIN_PASSWORD: ci-admin-password
+      HERO_ANTHROPIC_API_KEY: ci-dummy
+      HERO_ANTHROPIC_WORKSPACE_ID: ci-dummy
+      HERO_GOOGLE_MAPS_API_KEY: ci-dummy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12.5"  # must match .python-version: exports embed the exact Python version
+      - run: uv sync --frozen
+      - name: Unit + integration tests
+        run: uv run pytest tests/unit tests/integration -q
